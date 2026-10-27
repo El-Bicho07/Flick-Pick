@@ -1,0 +1,132 @@
+{% extends 'movies/base.html' %}
+{% load static %}
+
+{% block title %}{{ movie.title }} — FlickPick{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+  <a href="{% url 'movie_list' %}" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+    &larr; Back to Catalogue
+  </a>
+</div>
+
+<div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden; display: grid; grid-template-columns: minmax(260px, 320px) 1fr; gap: 2rem; box-shadow: var(--shadow-md);">
+  <!-- Poster Column -->
+  <div style="background: #020617; padding: 1.5rem; display: flex; flex-direction: column; align-items: center;">
+    <div style="width: 100%; aspect-ratio: 2/3; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-lg);">
+      <img src="{{ movie.get_poster }}" alt="{{ movie.title }} Poster" style="width: 100%; height: 100%; object-fit: cover;">
+    </div>
+
+    <!-- Quick External Links -->
+    <div style="width: 100%; margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.4rem;">
+      <div>Source: <strong style="color: var(--text-secondary);">{{ movie.get_source_display }}</strong></div>
+      {% if movie.imdb_id %}
+        <div>
+          <a href="https://www.imdb.com/title/tt{{ movie.imdb_id }}/" target="_blank" rel="noopener noreferrer" style="color: var(--accent-gold); text-decoration: none;">
+            IMDb Profile ↗
+          </a>
+        </div>
+      {% endif %}
+      {% if movie.tmdb_id %}
+        <div>
+          <a href="https://www.themoviedb.org/movie/{{ movie.tmdb_id }}" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none;">
+            TMDB Profile ↗
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Details Column -->
+  <div style="padding: 2rem 2rem 2rem 0; display: flex; flex-direction: column;">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+      <h1 style="font-size: 2.2rem; font-weight: 800; line-height: 1.2;">{{ movie.title }}</h1>
+      {% if movie.vote_average > 0 %}
+        <span style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: var(--accent-gold); font-weight: 700; padding: 0.25rem 0.6rem; border-radius: var(--radius-sm); font-size: 0.9rem;">
+          ★ {{ movie.vote_average|floatformat:1 }}
+        </span>
+      {% endif %}
+    </div>
+
+    {% if movie.original_title and movie.original_title != movie.title %}
+      <p style="color: var(--text-muted); font-size: 1rem; margin-bottom: 0.75rem;">Original title: <em>{{ movie.original_title }}</em></p>
+    {% endif %}
+
+    <div style="display: flex; align-items: center; gap: 1rem; color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
+      {% if movie.release_year %}<span>📅 {{ movie.release_year }}</span>{% endif %}
+      {% if movie.runtime %}<span>⏱️ {{ movie.runtime }} mins</span>{% endif %}
+      {% if movie.language %}<span>🌐 {{ movie.language }}</span>{% endif %}
+    </div>
+
+    <!-- Genres -->
+    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem;">
+      {% for g in genres_list %}
+        <span style="background: var(--bg-card); border: 1px solid var(--border-subtle); color: var(--accent-gold); padding: 0.3rem 0.75rem; border-radius: var(--radius-full); font-size: 0.85rem; font-weight: 600;">
+          {{ g }}
+        </span>
+      {% endfor %}
+    </div>
+
+    <!-- Overview / Description -->
+    <div style="margin-bottom: 1.75rem;">
+      <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Overview</h2>
+      <p style="color: var(--text-secondary); line-height: 1.7; font-size: 1rem;">
+        {% if movie.overview %}
+          {{ movie.overview }}
+        {% elif live_details and live_details.overview %}
+          {{ live_details.overview }}
+        {% else %}
+          <em>No synopsis available in local records. This film was imported from {{ movie.get_source_display }}.</em>
+        {% endif %}
+      </p>
+    </div>
+
+    <!-- Director & Cast -->
+    {% if movie.director or movie.cast %}
+      <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.75rem;">
+        {% if movie.director %}
+          <div style="margin-bottom: 0.5rem;">
+            <strong style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase;">Director:</strong>
+            <span style="color: var(--text-primary); font-weight: 600; margin-left: 0.5rem;">{{ movie.director }}</span>
+          </div>
+        {% endif %}
+        {% if movie.cast %}
+          <div>
+            <strong style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase;">Starring:</strong>
+            <span style="color: var(--text-primary); margin-left: 0.5rem;">{{ movie.cast }}</span>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <!-- Nominate to Room Action -->
+    <div style="margin-top: auto; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle);">
+      <h2 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem;">Add to a Movie Night Shortlist</h2>
+      {% if user.is_authenticated %}
+        {% if available_rooms %}
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            {% for r in available_rooms %}
+              <form action="{% url 'add_candidate' code=r.code %}" method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="movie_id" value="{{ movie.pk }}">
+                <button type="submit" class="btn btn-secondary btn-sm">
+                  + Add to {{ r.name }} ({{ r.code }})
+                </button>
+              </form>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            You have no active waiting rooms to add this film to.
+            <a href="{% url 'create_room' %}" style="color: var(--accent-gold);">Create a new room</a>.
+          </p>
+        {% endif %}
+      {% else %}
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+          <a href="{% url 'login' %}?next={{ request.path }}" style="color: var(--accent-gold);">Log in</a> to add this movie to your room shortlist.
+        </p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

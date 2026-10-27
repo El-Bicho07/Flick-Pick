@@ -1,0 +1,38 @@
+{% extends 'movies/base.html' %}
+
+{% block title %}Join Room — FlickPick{% endblock %}
+
+{% block content %}
+<div class="form-card" style="max-width: 480px; text-align: center;">
+  <span style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">🎟️</span>
+  <h1 style="font-size: 1.85rem; font-weight: 800; margin-bottom: 0.5rem;">Join a Movie Night</h1>
+  <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 2rem;">
+    Enter the 6-character room code shared by your movie night host.
+  </p>
+
+  <form method="post" action="{% url 'join_room' %}">
+    {% csrf_token %}
+
+    <div class="form-group" style="text-align: left;">
+      <label class="form-label" for="id_code">Room Code</label>
+      {{ form.code }}
+      {% if form.code.errors %}
+        <div class="form-error">{{ form.code.errors }}</div>
+      {% endif %}
+      <div class="form-help">Letters and numbers (e.g. 8K2X7N)</div>
+    </div>
+
+    <div class="form-group" style="text-align: left;">
+      <label class="form-label" for="id_nickname">Your Display Name in Room (Optional)</label>
+      {{ form.nickname }}
+      {% if form.nickname.errors %}
+        <div class="form-error">{{ form.nickname.errors }}</div>
+      {% endif %}
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 1rem;">
+      🚀 Enter Room
+    </button>
+  </form>
+</div>
+{% endblock %}

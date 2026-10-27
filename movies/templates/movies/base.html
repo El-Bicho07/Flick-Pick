@@ -1,0 +1,93 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Modern Web Guidance: Declare color-scheme early in HTML to prevent FOUC -->
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}FlickPick — Group Movie Picker{% endblock %}</title>
+
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <!-- Header & Navigation -->
+  <header class="site-header">
+    <div class="nav-container">
+      <a href="{% url 'home' %}" class="brand-link" aria-label="FlickPick Home">
+        <svg class="brand-logo-icon" viewBox="0 0 24 24">
+          <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/>
+        </svg>
+        <span>Flick<span class="brand-highlight">Pick</span></span>
+      </a>
+
+      <button class="mobile-nav-btn" aria-label="Toggle Navigation Menu" aria-expanded="false">
+        <svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+
+      <ul class="nav-links">
+        <li><a href="{% url 'movie_list' %}" class="nav-link">Browse Movies</a></li>
+        <li><a href="{% url 'create_room' %}" class="nav-link">Create Room</a></li>
+        <li><a href="{% url 'join_room' %}" class="nav-link">Join Room</a></li>
+
+        {% if user.is_authenticated %}
+          <li><a href="{% url 'profile' %}" class="nav-link user-badge">👤 {{ user.username }}</a></li>
+          <li>
+            <form action="{% url 'logout' %}" method="post" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-secondary btn-sm">Log Out</button>
+            </form>
+          </li>
+        {% else %}
+          <li><a href="{% url 'login' %}" class="nav-link">Log In</a></li>
+          <li><a href="{% url 'register' %}" class="btn btn-primary btn-sm">Sign Up</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="main-content" id="main-content">
+    {% if messages %}
+      <div class="messages-container" role="region" aria-label="Notifications">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }}" role="alert">
+            <span>{{ message }}</span>
+            <button type="button" class="alert-close" aria-label="Dismiss notification">&times;</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="footer-content">
+      <div>
+        <p>&copy; {% now "Y" %} FlickPick — The Collaborative Movie Night Decision Platform.</p>
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem;">
+          Academic Django Project. Datasets: GroupLens MovieLens, Indian Movies Dataset, CBFC Records.
+          {% if TMDB_ENABLED %}
+            <span>Live data provided by TMDB.</span>
+          {% endif %}
+        </p>
+      </div>
+      <ul class="footer-links">
+        <li><a href="{% url 'home' %}">Home</a></li>
+        <li><a href="{% url 'movie_list' %}">Catalogue</a></li>
+        <li><a href="{% url 'create_room' %}">Start a Room</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script src="{% static 'js/main.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

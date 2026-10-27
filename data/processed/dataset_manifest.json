@@ -1,0 +1,39 @@
+{
+  "created_at": "2026-10-27T04:35:18.516649",
+  "app": "FlickPick",
+  "sources": {
+    "movielens": {
+      "last_import_at": "2026-10-27T04:45:11.661130",
+      "status": "success",
+      "file_path": "/home/surya-j-s/Projects/Flick_Pick/data/raw/movielens/movies.csv",
+      "total_rows_read": 5,
+      "imported_count": 5,
+      "updated_count": 0,
+      "skipped_count": 0,
+      "invalid_count": 0,
+      "notes": "Imported titles and genres from MovieLens Small; links mapped to IMDb and TMDB IDs."
+    },
+    "indian_movies": {
+      "last_import_at": "2026-10-27T04:35:47.707432",
+      "status": "success",
+      "file_path": "/home/surya-j-s/Projects/Flick_Pick/data/raw/indian_movies/indian_movie_dataset_500.csv",
+      "total_rows_read": 500,
+      "imported_count": 450,
+      "updated_count": 50,
+      "skipped_count": 0,
+      "invalid_count": 0,
+      "notes": "Imported titles, languages, cast, director, runtime, and ratings from Indian Movies Dataset (500)."
+    },
+    "cbfc": {
+      "last_import_at": "2026-10-27T04:45:11.599473",
+      "status": "success",
+      "file_path": "/home/surya-j-s/Projects/Flick_Pick/data/raw/cbfc",
+      "total_rows_read": 10,
+      "imported_count": 10,
+      "updated_count": 0,
+      "skipped_count": 0,
+      "invalid_count": 0,
+      "notes": "Imported film certification records, languages, and certificate data from CBFC records."
+    }
+  }
+}

@@ -1,0 +1,139 @@
+{% extends 'movies/base.html' %}
+{% load static %}
+
+{% block title %}Movie Catalogue — FlickPick{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h1 style="font-size: 2rem; font-weight: 800;">Movie Catalogue</h1>
+    <p style="color: var(--text-secondary); font-size: 0.95rem;">
+      Found <strong>{{ total_results }}</strong> movie{{ total_results|pluralize }} in the catalogue
+    </p>
+  </div>
+
+  {% if active_room %}
+    <div style="background: rgba(245, 158, 11, 0.12); border: 1px dashed var(--accent-gold); padding: 0.6rem 1rem; border-radius: var(--radius-md); display: flex; align-items: center; gap: 0.75rem;">
+      <div>
+        <span style="font-size: 0.8rem; color: var(--text-muted); display: block;">Shortlisting for:</span>
+        <strong style="color: var(--accent-gold);">{{ active_room.name }} ({{ active_room.code }})</strong>
+      </div>
+      <a href="{% url 'room_detail' code=active_room.code %}" class="btn btn-secondary btn-sm">Back to Room &rarr;</a>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Search & Filter Bar -->
+<div class="filter-bar-card">
+  <form method="get" action="{% url 'movie_list' %}" class="filter-form-grid">
+    {% if active_room %}
+      <input type="hidden" name="room" value="{{ active_room.code }}">
+    {% endif %}
+
+    <div>
+      <label class="form-label" for="id_q">Search</label>
+      {{ form.q }}
+    </div>
+
+    <div>
+      <label class="form-label" for="id_genre">Genre</label>
+      {{ form.genre }}
+    </div>
+
+    <div>
+      <label class="form-label" for="id_language">Language</label>
+      {{ form.language }}
+    </div>
+
+    <div>
+      <label class="form-label" for="id_year_min">Min Year</label>
+      {{ form.year_min }}
+    </div>
+
+    <div>
+      <label class="form-label" for="id_sort_by">Sort By</label>
+      {{ form.sort_by }}
+    </div>
+
+    <div style="display: flex; gap: 0.5rem;">
+      <button type="submit" class="btn btn-primary" style="height: 42px;">Filter</button>
+      <a href="{% url 'movie_list' %}{% if active_room %}?room={{ active_room.code }}{% endif %}" class="btn btn-secondary" style="height: 42px;">Reset</a>
+    </div>
+  </form>
+</div>
+
+<!-- Movie Grid -->
+{% if page_obj %}
+  <div class="movies-grid">
+    {% for movie in page_obj %}
+      <div class="movie-card">
+        <div class="movie-poster-wrap">
+          <img src="{{ movie.get_poster }}" alt="{{ movie.title }}" class="movie-poster-img" loading="lazy">
+          {% if movie.vote_average > 0 %}
+            <span class="movie-rating-badge">★ {{ movie.vote_average|floatformat:1 }}</span>
+          {% endif %}
+        </div>
+        <div class="movie-card-body">
+          <a href="{% url 'movie_detail' pk=movie.pk %}" class="movie-card-title">{{ movie.title }}</a>
+          <div class="movie-card-meta">
+            {% if movie.release_year %}<span>{{ movie.release_year }}</span>{% endif %}
+            {% if movie.language %}<span>&bull; {{ movie.language }}</span>{% endif %}
+            {% if movie.runtime %}<span>&bull; {{ movie.runtime }}m</span>{% endif %}
+          </div>
+          <div class="movie-genres-tags">
+            {% for g in movie.get_genres_list|slice:":3" %}
+              <span class="genre-tag">{{ g }}</span>
+            {% endfor %}
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; margin-top: auto;">
+            <a href="{% url 'movie_detail' pk=movie.pk %}" class="btn btn-secondary btn-sm" style="flex: 1;">Details</a>
+
+            {% if active_room and active_room.status == 'WAITING' %}
+              {% if movie.pk in existing_candidate_ids %}
+                <button type="button" class="btn btn-sm" style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); cursor: default;" disabled>Added</button>
+              {% else %}
+                <form action="{% url 'add_candidate' code=active_room.code %}" method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="movie_id" value="{{ movie.pk }}">
+                  <button type="submit" class="btn btn-primary btn-sm">+ Shortlist</button>
+                </form>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination Controls -->
+  {% if page_obj.has_other_pages %}
+    <nav style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 2.5rem;" aria-label="Pagination Navigation">
+      {% if page_obj.has_previous %}
+        <a href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.genre %}&genre={{ request.GET.genre }}{% endif %}{% if request.GET.language %}&language={{ request.GET.language }}{% endif %}{% if request.GET.year_min %}&year_min={{ request.GET.year_min }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}{% if active_room %}&room={{ active_room.code }}{% endif %}" class="btn btn-secondary btn-sm">&laquo; First</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.genre %}&genre={{ request.GET.genre }}{% endif %}{% if request.GET.language %}&language={{ request.GET.language }}{% endif %}{% if request.GET.year_min %}&year_min={{ request.GET.year_min }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}{% if active_room %}&room={{ active_room.code }}{% endif %}" class="btn btn-secondary btn-sm">&lsaquo; Prev</a>
+      {% endif %}
+
+      <span style="color: var(--text-secondary); font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+        Page <strong>{{ page_obj.number }}</strong> of <strong>{{ page_obj.paginator.num_pages }}</strong>
+      </span>
+
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.genre %}&genre={{ request.GET.genre }}{% endif %}{% if request.GET.language %}&language={{ request.GET.language }}{% endif %}{% if request.GET.year_min %}&year_min={{ request.GET.year_min }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}{% if active_room %}&room={{ active_room.code }}{% endif %}" class="btn btn-secondary btn-sm">Next &rsaquo;</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.genre %}&genre={{ request.GET.genre }}{% endif %}{% if request.GET.language %}&language={{ request.GET.language }}{% endif %}{% if request.GET.year_min %}&year_min={{ request.GET.year_min }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}{% if active_room %}&room={{ active_room.code }}{% endif %}" class="btn btn-secondary btn-sm">Last &raquo;</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+
+{% else %}
+  <!-- Empty State -->
+  <div style="background: var(--bg-surface); border: 1px dashed var(--border-subtle); border-radius: var(--radius-lg); padding: 4rem 2rem; text-align: center; margin-top: 2rem;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+    <h2 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem;">No movies matched your filters</h2>
+    <p style="color: var(--text-secondary); max-width: 480px; margin: 0 auto 1.5rem;">
+      Try broadening your search keywords, clearing selected genres or languages, or resetting the filter options.
+    </p>
+    <a href="{% url 'movie_list' %}{% if active_room %}?room={{ active_room.code }}{% endif %}" class="btn btn-primary">Reset Filters</a>
+  </div>
+{% endif %}
+{% endblock %}

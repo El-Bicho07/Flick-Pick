@@ -1,0 +1,75 @@
+{% extends 'movies/base.html' %}
+
+{% block title %}Create Movie Night Room — FlickPick{% endblock %}
+
+{% block content %}
+<div class="form-card" style="max-width: 680px;">
+  <div style="text-align: center; margin-bottom: 2rem;">
+    <span style="font-size: 2.2rem; display: block; margin-bottom: 0.5rem;">🎉</span>
+    <h1 style="font-size: 1.85rem; font-weight: 800; margin-bottom: 0.5rem;">Create a Movie-Night Room</h1>
+    <p style="color: var(--text-secondary); font-size: 0.95rem;">
+      Set up preferences for your session. You'll receive a shareable 6-digit room code to invite your friends.
+    </p>
+  </div>
+
+  <form method="post" action="{% url 'create_room' %}">
+    {% csrf_token %}
+
+    <div class="form-group">
+      <label class="form-label" for="id_name">Room Name</label>
+      {{ form.name }}
+      {% if form.name.errors %}
+        <div class="form-error">{{ form.name.errors }}</div>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="id_preferred_language">Preferred Language</label>
+      {{ form.preferred_language }}
+      {% if form.preferred_language.errors %}
+        <div class="form-error">{{ form.preferred_language.errors }}</div>
+      {% endif %}
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+      <div>
+        <label class="form-label" for="id_preferred_year_min">Min Release Year</label>
+        {{ form.preferred_year_min }}
+        {% if form.preferred_year_min.errors %}
+          <div class="form-error">{{ form.preferred_year_min.errors }}</div>
+        {% endif %}
+      </div>
+      <div>
+        <label class="form-label" for="id_preferred_year_max">Max Release Year</label>
+        {{ form.preferred_year_max }}
+        {% if form.preferred_year_max.errors %}
+          <div class="form-error">{{ form.preferred_year_max.errors }}</div>
+        {% endif %}
+      </div>
+      <div>
+        <label class="form-label" for="id_max_runtime">Max Runtime (mins)</label>
+        {{ form.max_runtime }}
+        {% if form.max_runtime.errors %}
+          <div class="form-error">{{ form.max_runtime.errors }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Preferred Genres (optional)</label>
+      <div class="genre-checkbox-grid">
+        {% for choice in form.genres %}
+          <label class="genre-checkbox-label">
+            {{ choice.tag }}
+            <span>{{ choice.choice_label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 1rem;">
+      ✨ Generate Room &amp; Code
+    </button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends 'movies/base.html' %}
+
+{% block title %}My Profile &amp; Preferences — FlickPick{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <h1 style="font-size: 2rem; font-weight: 800;">Account &amp; Movie Preferences</h1>
+  <p style="color: var(--text-secondary); font-size: 0.95rem;">
+    Customize your default movie tastes and manage your movie-night rooms.
+  </p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; margin-bottom: 3rem;">
+  <!-- Account Info Form -->
+  <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.75rem;">
+    <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.25rem;">Account Information</h2>
+    <form method="post" action="{% url 'profile' %}">
+      {% csrf_token %}
+      <input type="hidden" name="update_profile" value="1">
+
+      <div class="form-group">
+        <label class="form-label" for="id_first_name">First Name</label>
+        {{ profile_form.first_name }}
+        {% if profile_form.first_name.errors %}
+          <div class="form-error">{{ profile_form.first_name.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="id_last_name">Last Name</label>
+        {{ profile_form.last_name }}
+        {% if profile_form.last_name.errors %}
+          <div class="form-error">{{ profile_form.last_name.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="id_email">Email Address</label>
+        {{ profile_form.email }}
+        {% if profile_form.email.errors %}
+          <div class="form-error">{{ profile_form.email.errors }}</div>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn btn-secondary" style="width: 100%;">
+        Save Account Details
+      </button>
+    </form>
+  </div>
+
+  <!-- Movie Preferences Form -->
+  <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.75rem;">
+    <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.25rem;">Movie Preferences</h2>
+    <form method="post" action="{% url 'profile' %}">
+      {% csrf_token %}
+      <input type="hidden" name="update_preferences" value="1">
+
+      <div class="form-group">
+        <label class="form-label" for="id_preferred_languages">Preferred Language</label>
+        {{ pref_form.preferred_languages }}
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div>
+          <label class="form-label" for="id_min_year">Earliest Year</label>
+          {{ pref_form.min_year }}
+        </div>
+        <div>
+          <label class="form-label" for="id_max_runtime">Max Runtime (min)</label>
+          {{ pref_form.max_runtime }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Preferred Genres</label>
+        <div class="genre-checkbox-grid" style="max-height: 200px; overflow-y: auto; padding-right: 0.5rem;">
+          {% for choice in pref_form.genres %}
+            <label class="genre-checkbox-label">
+              {{ choice.tag }}
+              <span>{{ choice.choice_label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%;">
+        Save Preferences
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Hosted & Joined Rooms History -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem;">
+  <!-- Hosted Rooms -->
+  <div>
+    <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;">Rooms You Host ({{ hosted_rooms.count }})</h2>
+    {% if hosted_rooms %}
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        {% for r in hosted_rooms %}
+          <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 700; font-size: 1rem;">{{ r.name }}</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">
+                Code: <span style="color: var(--accent-gold); font-family: monospace;">{{ r.code }}</span> &bull; {{ r.get_status_display }}
+              </div>
+            </div>
+            <a href="{% url 'room_detail' code=r.code %}" class="btn btn-secondary btn-sm">Enter &rarr;</a>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color: var(--text-muted); font-size: 0.9rem;">You haven't hosted any rooms yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- Joined Rooms -->
+  <div>
+    <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;">Rooms You Joined ({{ joined_rooms.count }})</h2>
+    {% if joined_rooms %}
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        {% for r in joined_rooms %}
+          <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 700; font-size: 1rem;">{{ r.name }}</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">
+                Host: {{ r.host.username }} &bull; {{ r.get_status_display }}
+              </div>
+            </div>
+            <a href="{% url 'room_detail' code=r.code %}" class="btn btn-secondary btn-sm">Enter &rarr;</a>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color: var(--text-muted); font-size: 0.9rem;">You haven't joined any rooms as a guest yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

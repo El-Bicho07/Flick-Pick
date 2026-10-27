@@ -1,0 +1,73 @@
+{% extends 'movies/base.html' %}
+
+{% block title %}Cast Your Vote — {{ room.name }} — FlickPick{% endblock %}
+
+{% block content %}
+<div class="voting-container">
+  <div style="text-align: center; margin-bottom: 2rem;">
+    <span class="status-pill VOTING" style="margin-bottom: 0.75rem;">Voting In Progress</span>
+    <h1 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem;">Pick Your Favorite Movie</h1>
+    <p style="color: var(--text-secondary); font-size: 1rem; max-width: 540px; margin: 0 auto;">
+      Room: <strong>{{ room.name }} ({{ room.code }})</strong>.
+      Choose one movie from the shortlist below. You have <strong>1 vote</strong>.
+    </p>
+  </div>
+
+  <form method="post" action="{% url 'voting' code=room.code %}" id="voting-form">
+    {% csrf_token %}
+
+    <div class="voting-options-list" role="radiogroup" aria-label="Candidate movies to vote on">
+      {% for c in candidates %}
+        <label class="voting-option-label" for="candidate-{{ c.pk }}">
+          <input
+            type="radio"
+            name="candidate_id"
+            id="candidate-{{ c.pk }}"
+            value="{{ c.pk }}"
+            class="voting-option-input"
+            required
+            style="transform: scale(1.3); cursor: pointer;"
+          >
+
+          <div class="voting-option-poster">
+            <img src="{{ c.movie.get_poster }}" alt="{{ c.movie.title }}" loading="lazy">
+          </div>
+
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;">
+              <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin: 0;">
+                {{ c.movie.title }}
+              </h2>
+              {% if c.movie.release_year %}
+                <span style="color: var(--text-muted); font-size: 0.9rem;">({{ c.movie.release_year }})</span>
+              {% endif %}
+            </div>
+
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.25rem 0 0.5rem;">
+              {{ c.movie.language }}
+              {% if c.movie.runtime %}&bull; {{ c.movie.runtime }} mins{% endif %}
+              {% if c.movie.vote_average > 0 %}&bull; ★ {{ c.movie.vote_average|floatformat:1 }}{% endif %}
+            </div>
+
+            {% if c.movie.overview %}
+              <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                {{ c.movie.overview }}
+              </p>
+            {% endif %}
+          </div>
+        </label>
+      {% endfor %}
+    </div>
+
+    <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.25rem; margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <a href="{% url 'room_detail' code=room.code %}" class="btn btn-secondary">
+        &larr; Cancel / Return to Room
+      </a>
+
+      <button type="submit" class="btn btn-primary btn-lg" style="min-width: 200px;">
+        🗳️ Submit My Vote
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

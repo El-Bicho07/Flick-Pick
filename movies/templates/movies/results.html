@@ -1,0 +1,143 @@
+{% extends 'movies/base.html' %}
+
+{% block title %}Results: {{ room.name }} — FlickPick{% endblock %}
+
+{% block content %}
+<div style="max-width: 860px; margin: 0 auto;">
+  <div style="text-align: center; margin-bottom: 2rem;">
+    <span class="status-pill COMPLETED" style="margin-bottom: 0.75rem;">Decision Finalized</span>
+    <h1 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem;">Movie Night Pick Results</h1>
+    <p style="color: var(--text-secondary); font-size: 1rem;">
+      Room: <strong>{{ room.name }} ({{ room.code }})</strong> &bull; Total Votes Cast: <strong>{{ total_votes }}</strong>
+    </p>
+  </div>
+
+  {% if is_tie %}
+    <!-- Tie Outcome Card -->
+    <div class="results-hero-card" style="border-color: var(--accent-blue); background: linear-gradient(180deg, rgba(56, 189, 248, 0.15) 0%, rgba(18, 24, 36, 0.9) 100%);">
+      <div class="winner-crown-icon">🤝</div>
+      <h2 style="font-size: 1.8rem; font-weight: 800; color: var(--accent-blue); margin-bottom: 0.5rem;">It's a Tie!</h2>
+      <p style="color: var(--text-secondary); max-width: 520px; margin: 0 auto 1.5rem; font-size: 1rem;">
+        The group was split equally! The following movies tied with <strong>{{ max_votes }} vote{{ max_votes|pluralize }}</strong> each:
+      </p>
+
+      <div style="display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;">
+        {% for w in winners %}
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; width: 200px; text-align: center;">
+            <div style="aspect-ratio: 2/3; border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 0.75rem;">
+              <img src="{{ w.movie.get_poster }}" alt="{{ w.movie.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">{{ w.movie.title }}</h3>
+            <span style="font-size: 0.85rem; color: var(--accent-blue); font-weight: 600;">{{ w.tally }} Votes</span>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  {% elif winners %}
+    <!-- Single Clear Winner -->
+    {% with winner=winners.0 %}
+      <div class="results-hero-card">
+        <div class="winner-crown-icon">👑</div>
+        <span style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 2px; color: var(--accent-gold); font-weight: 700;">Tonight's Winning Movie</span>
+        <h2 class="winner-movie-title">{{ winner.movie.title }}</h2>
+
+        <p style="color: var(--text-secondary); font-size: 1.05rem; margin-bottom: 1.5rem;">
+          Won with <strong>{{ max_votes }} vote{{ max_votes|pluralize }}</strong> out of {{ total_votes }} total vote{{ total_votes|pluralize }}.
+        </p>
+
+        <div style="max-width: 220px; margin: 0 auto 1.5rem; aspect-ratio: 2/3; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-lg);">
+          <img src="{{ winner.movie.get_poster }}" alt="{{ winner.movie.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: center; color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1rem;">
+          {% if winner.movie.release_year %}<span>📅 {{ winner.movie.release_year }}</span>{% endif %}
+          <span>🌐 {{ winner.movie.language }}</span>
+          {% if winner.movie.runtime %}<span>⏱️ {{ winner.movie.runtime }}m</span>{% endif %}
+        </div>
+
+        {% if winner.movie.overview %}
+          <p style="max-width: 600px; margin: 0 auto 1.5rem; color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6;">
+            {{ winner.movie.overview }}
+          </p>
+        {% endif %}
+
+        <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+          <a href="{% url 'movie_detail' pk=winner.movie.pk %}" class="btn btn-secondary">Full Movie Details</a>
+          {% if winner.movie.imdb_id %}
+            <a href="https://www.imdb.com/title/tt{{ winner.movie.imdb_id }}/" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">IMDb Profile ↗</a>
+          {% endif %}
+        </div>
+      </div>
+    {% endwith %}
+
+  {% else %}
+    <!-- No candidates or no votes -->
+    <div style="background: var(--bg-surface); border: 1px dashed var(--border-subtle); border-radius: var(--radius-lg); padding: 3rem 1.5rem; text-align: center; margin-bottom: 2rem;">
+      <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🤷</div>
+      <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem;">No votes were recorded</h2>
+      <p style="color: var(--text-secondary);">No winner could be determined for this room session.</p>
+    </div>
+  {% endif %}
+
+  <!-- Detailed Voting Leaderboard Table -->
+  <div class="tally-table-card">
+    <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.25rem;">Full Vote Breakdown</h2>
+    <table class="tally-table">
+      <thead>
+        <tr>
+          <th style="width: 50px;">#</th>
+          <th>Movie Contender</th>
+          <th style="width: 120px;">Votes</th>
+          <th style="width: 150px;">Share</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in candidates_ranked %}
+          <tr>
+            <td style="font-weight: 700; color: var(--text-muted);">{{ forloop.counter }}</td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 36px; height: 54px; border-radius: var(--radius-sm); overflow: hidden; background: #020617; flex-shrink: 0;">
+                  <img src="{{ c.movie.get_poster }}" alt="{{ c.movie.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <div>
+                  <a href="{% url 'movie_detail' pk=c.movie.pk %}" style="color: var(--text-primary); font-weight: 600; text-decoration: none;">
+                    {{ c.movie.title }}
+                  </a>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">
+                    {{ c.movie.language }} {% if c.movie.release_year %}({{ c.movie.release_year }}){% endif %}
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td style="font-weight: 700; font-size: 1rem; color: var(--accent-gold);">
+              {{ c.tally }} vote{{ c.tally|pluralize }}
+            </td>
+            <td>
+              <div class="vote-bar-bg">
+                <div class="vote-bar-fill" style="width: {% if total_votes > 0 %}{% widthratio c.tally total_votes 100 %}{% else %}0{% endif %}%;"></div>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Bottom Navigation Actions -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <a href="{% url 'room_detail' code=room.code %}" class="btn btn-secondary">&larr; Back to Room</a>
+
+    <div style="display: flex; gap: 0.75rem;">
+      {% if is_host %}
+        <form action="{% url 'reset_room' code=room.code %}" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-secondary">🔄 Reset Room &amp; Vote Again</button>
+        </form>
+      {% endif %}
+      <a href="{% url 'create_room' %}" class="btn btn-primary">✨ Create New Room</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends 'movies/base.html' %}
+{% load static %}
+
+{% block title %}FlickPick — Stop Arguing, Start Watching{% endblock %}
+
+{% block content %}
+<section class="hero-section" style="text-align: center; padding: 3rem 1rem 3.5rem;">
+  <span style="background: rgba(245, 158, 11, 0.15); color: var(--accent-gold); font-size: 0.85rem; font-weight: 700; padding: 0.35rem 0.9rem; border-radius: 9999px; display: inline-block; margin-bottom: 1.25rem; border: 1px solid rgba(245, 158, 11, 0.3);">
+    🎬 Group Movie Decider
+  </span>
+  <h1 style="font-size: clamp(2.2rem, 5vw, 3.5rem); font-weight: 900; line-height: 1.15; max-width: 800px; margin: 0 auto 1.25rem; letter-spacing: -1px;">
+    Decide which movie to watch <span style="background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">together</span> without the endless debate.
+  </h1>
+  <p style="font-size: 1.15rem; color: var(--text-secondary); max-width: 620px; margin: 0 auto 2.25rem;">
+    Create a movie-night room, invite your friends with a quick code, curate a shortlist from our 10,000+ local catalogue, vote democratically, and let FlickPick reveal the winner!
+  </p>
+
+  <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+    <a href="{% url 'create_room' %}" class="btn btn-primary btn-lg">✨ Create Movie Room</a>
+    <a href="{% url 'join_room' %}" class="btn btn-secondary btn-lg">🔑 Join with Room Code</a>
+    <a href="{% url 'movie_list' %}" class="btn btn-secondary btn-lg">🍿 Browse Catalogue</a>
+  </div>
+</section>
+
+<!-- Active User Rooms (if logged in and has rooms) -->
+{% if user_rooms %}
+<section style="margin-bottom: 3rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h2 style="font-size: 1.35rem; font-weight: 700;">Your Movie Rooms</h2>
+    <a href="{% url 'profile' %}" style="color: var(--accent-gold); font-size: 0.9rem; text-decoration: none;">View All &rarr;</a>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem;">
+    {% for r in user_rooms %}
+      <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span class="status-pill {{ r.status }}">{{ r.get_status_display }}</span>
+            <span style="font-family: monospace; font-weight: 700; color: var(--accent-gold); font-size: 1.05rem;">{{ r.code }}</span>
+          </div>
+          <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.35rem;">{{ r.name }}</h3>
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Host: {{ r.host.username }} &bull; {{ r.participants.count }} participant{{ r.participants.count|pluralize }}
+          </p>
+        </div>
+        <a href="{% url 'room_detail' code=r.code %}" class="btn btn-secondary btn-sm" style="width: 100%;">Enter Room &rarr;</a>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- How It Works Steps -->
+<section style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 2.5rem 2rem; margin-bottom: 3.5rem;">
+  <h2 style="text-align: center; font-size: 1.75rem; font-weight: 800; margin-bottom: 2rem;">How FlickPick Works</h2>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; text-align: center;">
+    <div style="padding: 1rem;">
+      <div style="width: 52px; height: 52px; background: rgba(245, 158, 11, 0.15); color: var(--accent-gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 800; margin: 0 auto 1rem;">1</div>
+      <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Host a Room</h3>
+      <p style="font-size: 0.9rem; color: var(--text-secondary);">Create a room, set genre, language, or year preferences, and share your 6-digit room code with friends.</p>
+    </div>
+    <div style="padding: 1rem;">
+      <div style="width: 52px; height: 52px; background: rgba(56, 189, 248, 0.15); color: var(--accent-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 800; margin: 0 auto 1rem;">2</div>
+      <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Shortlist Candidates</h3>
+      <p style="font-size: 0.9rem; color: var(--text-secondary);">Browse our rich local catalogue or use auto-shortlist to nominate top contender films.</p>
+    </div>
+    <div style="padding: 1rem;">
+      <div style="width: 52px; height: 52px; background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 800; margin: 0 auto 1rem;">3</div>
+      <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Vote in Secret</h3>
+      <p style="font-size: 0.9rem; color: var(--text-secondary);">Each participant casts their single vote anonymously on their own device. No peer pressure.</p>
+    </div>
+    <div style="padding: 1rem;">
+      <div style="width: 52px; height: 52px; background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 800; margin: 0 auto 1rem;">4</div>
+      <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Watch the Winner</h3>
+      <p style="font-size: 0.9rem; color: var(--text-secondary);">FlickPick tallies the votes on the server, handles any ties, and declares the winning film!</p>
+    </div>
+  </div>
+</section>
+
+<!-- Featured Catalogue Movies -->
+<section>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+    <div>
+      <h2 style="font-size: 1.5rem; font-weight: 800;">Featured Movies</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">From our verified local catalogue of {{ total_movies }} films</p>
+    </div>
+    <a href="{% url 'movie_list' %}" class="btn btn-secondary btn-sm">Explore All &rarr;</a>
+  </div>
+
+  <div class="movies-grid">
+    {% for movie in recent_movies %}
+      <div class="movie-card">
+        <div class="movie-poster-wrap">
+          <img src="{{ movie.get_poster }}" alt="{{ movie.title }} Poster" class="movie-poster-img" loading="lazy">
+          {% if movie.vote_average > 0 %}
+            <span class="movie-rating-badge">★ {{ movie.vote_average|floatformat:1 }}</span>
+          {% endif %}
+        </div>
+        <div class="movie-card-body">
+          <a href="{% url 'movie_detail' pk=movie.pk %}" class="movie-card-title">{{ movie.title }}</a>
+          <div class="movie-card-meta">
+            {% if movie.release_year %}<span>{{ movie.release_year }}</span>{% endif %}
+            {% if movie.language %}<span>&bull; {{ movie.language }}</span>{% endif %}
+            {% if movie.runtime %}<span>&bull; {{ movie.runtime }}m</span>{% endif %}
+          </div>
+          <div class="movie-genres-tags">
+            {% for g in movie.get_genres_list|slice:":3" %}
+              <span class="genre-tag">{{ g }}</span>
+            {% endfor %}
+          </div>
+          <a href="{% url 'movie_detail' pk=movie.pk %}" class="btn btn-secondary btn-sm" style="width: 100%; margin-top: auto;">Details</a>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

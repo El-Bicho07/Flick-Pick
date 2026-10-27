@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450" width="300" height="450">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#ef4444" />
+    </linearGradient>
+  </defs>
+  <rect width="300" height="450" fill="url(#grad)" rx="8" />
+  <rect x="12" y="12" width="276" height="426" fill="none" stroke="#334155" stroke-width="2" stroke-dasharray="6,6" rx="6" />
+  <circle cx="150" cy="180" r="50" fill="#1e293b" stroke="url(#accent)" stroke-width="4" />
+  <polygon points="142,160 168,180 142,200" fill="#f8fafc" />
+  <text x="150" y="270" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="700" fill="#f8fafc" text-anchor="middle" letter-spacing="1">FLICKPICK</text>
+  <text x="150" y="300" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#94a3b8" text-anchor="middle">No Poster Available</text>
+  <rect x="100" y="325" width="100" height="3" fill="url(#accent)" rx="1.5" />
+</svg>

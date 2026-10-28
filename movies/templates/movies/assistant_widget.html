@@ -1,30 +1,44 @@
-<!-- Reusable FlickPick AI Assistant Widget -->
+<!-- Reusable FlickPick AI Assistant Widget (Midnight Cinema Design System) -->
 <div id="flickpick-ai-widget-root">
   <!-- Floating Launch Button -->
-  <button id="ai-widget-toggle" 
-          class="ai-widget-fab" 
-          aria-label="Open FlickPick AI Assistant" 
-          aria-expanded="false" 
+  <button id="ai-widget-toggle"
+          class="ai-widget-fab"
+          aria-label="Open FlickPick AI Assistant"
+          aria-expanded="false"
           aria-controls="ai-widget-drawer">
-    <span class="ai-widget-fab-icon">✨</span>
-    <span class="ai-widget-fab-label">Ask FlickPick AI</span>
+    <div class="ai-widget-fab-icon-wrap">
+      <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+    </div>
+    <span class="ai-widget-fab-label font-display font-semibold">FlickBot AI</span>
   </button>
 
-  <!-- Assistant Drawer / Modal Container -->
-  <aside id="ai-widget-drawer" 
-         class="ai-widget-drawer" 
-         role="dialog" 
-         aria-label="FlickPick AI Recommendation Assistant" 
-         aria-modal="true" 
+  <!-- Assistant Drawer Container -->
+  <aside id="ai-widget-drawer"
+         class="ai-widget-drawer"
+         role="dialog"
+         aria-label="FlickPick AI Cinema Assistant"
+         aria-modal="true"
          hidden>
     <header class="ai-widget-header">
       <div class="ai-widget-header-title">
-        <span class="ai-widget-status-dot" aria-hidden="true"></span>
-        <strong>✨ FlickPick AI Assistant</strong>
+        <div class="w-8 h-8 rounded-lg bg-secondary-container/80 border border-primary/30 flex items-center justify-center text-primary">
+          <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+        </div>
+        <div>
+          <div class="font-display font-bold text-xs text-on-surface flex items-center gap-1.5">
+            <span>FlickBot AI</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-mint animate-ping"></span>
+          </div>
+          <div class="text-[10px] text-outline font-body">Cinema Concierge</div>
+        </div>
       </div>
-      <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <a href="{% url 'ai_chat' %}" class="ai-widget-expand-btn" title="Open full chat screen" aria-label="Open full chat page">↗</a>
-        <button id="ai-widget-close" class="ai-widget-close-btn" aria-label="Close Assistant">&times;</button>
+      <div class="flex items-center gap-1">
+        <a href="{% url 'ai_chat' %}" class="ai-widget-icon-btn" title="Open full chat screen" aria-label="Open full chat page">
+          <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+        </a>
+        <button id="ai-widget-close" class="ai-widget-icon-btn" aria-label="Close Assistant">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
       </div>
     </header>
 
@@ -32,36 +46,36 @@
       <!-- Welcome message -->
       <div class="ai-msg ai-msg-bot">
         <div class="ai-msg-bubble">
-          👋 Hi! I'm your FlickPick movie & support assistant. Ask me for movie recommendations (*"Tamil thrillers under 2 hours"*), FAQs (*"How does voting work?"*), or error codes (*"Error 404"*).
+          👋 Hello! I'm <strong>FlickBot</strong>, your cinema decision assistant. Ask me for movie recommendations (<em>"Tamil thriller under 2h"</em>), room voting rules, or error codes!
         </div>
       </div>
     </div>
 
     <!-- Suggested quick prompt pills -->
     <div class="ai-widget-suggestions" aria-label="Suggested Prompts">
-      <button type="button" class="ai-pill" onclick="window.sendWidgetPrompt('Recommend top rated movies')">🎬 Top Rated</button>
-      <button type="button" class="ai-pill" onclick="window.sendWidgetPrompt('How does voting work?')">🗳️ Voting</button>
-      <button type="button" class="ai-pill" onclick="window.sendWidgetPrompt('What does error 404 mean?')">⚠️ Error 404</button>
+      <button type="button" class="ai-pill" onclick="window.sendWidgetPrompt('Recommend top rated movies')">🍿 Top Rated</button>
+      <button type="button" class="ai-pill" onclick="window.sendWidgetPrompt('How does voting work?')">🗳️ Room Rules</button>
+      <button type="button" class="ai-pill" onclick="window.sendWidgetPrompt('Tamil thriller under 2 hours')">⚡ Quick Pick</button>
     </div>
 
     <!-- Input Form -->
     <form id="ai-widget-form" class="ai-widget-footer">
       {% csrf_token %}
-      <input type="text" 
-             id="ai-widget-input" 
-             class="ai-widget-input" 
-             placeholder="Ask for movies, FAQs, or errors..." 
-             autocomplete="off" 
+      <input type="text"
+             id="ai-widget-input"
+             class="ai-widget-input"
+             placeholder="Ask for movies, FAQs, or errors..."
+             autocomplete="off"
              required>
-      <button type="submit" id="ai-widget-send" class="btn btn-primary btn-sm" aria-label="Send Message">
-        ➤
+      <button type="submit" id="ai-widget-send" class="ai-widget-send-btn" aria-label="Send Message">
+        <span class="material-symbols-outlined text-[16px]">send</span>
       </button>
     </form>
   </aside>
 </div>
 
 <style>
-/* FlickPick AI Floating Widget Styles */
+/* FlickPick AI Floating Widget — Midnight Cinema System */
 .ai-widget-fab {
   position: fixed;
   bottom: 1.5rem;
@@ -70,35 +84,45 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: #0f172a;
-  border: none;
-  border-radius: 30px;
-  padding: 0.75rem 1.25rem;
-  font-weight: 700;
-  font-size: 0.95rem;
+  background: var(--bg-card, #201e29);
+  color: var(--accent-lavender, #b8a1ff);
+  border: 1px solid var(--border-subtle, #36333f);
+  border-radius: 9999px;
+  padding: 0.55rem 1.15rem;
+  font-weight: 600;
+  font-size: 0.88rem;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.6), 0 0 20px rgba(184, 161, 255, 0.25);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .ai-widget-fab:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 25px rgba(245, 158, 11, 0.55);
+  border-color: var(--accent-lavender, #b8a1ff);
+  background: var(--bg-card-hover, #2b2833);
+  box-shadow: 0 6px 30px rgba(184, 161, 255, 0.4);
 }
-.ai-widget-fab-icon { font-size: 1.2rem; }
+.ai-widget-fab-icon-wrap {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(77, 63, 110, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .ai-widget-drawer {
   position: fixed;
-  bottom: 5.5rem;
+  bottom: 5.25rem;
   right: 1.5rem;
-  width: 380px;
+  width: 390px;
   max-width: calc(100vw - 2rem);
-  height: 520px;
+  height: 540px;
   max-height: calc(100vh - 7rem);
-  background: var(--bg-card, #1e293b);
-  border: 1px solid var(--border-color, #334155);
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55);
+  background: #211c31;
+  border: 1px solid #393148;
+  border-radius: 18px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8), 0 0 40px rgba(184, 161, 255, 0.2);
   z-index: 9995;
   display: flex;
   flex-direction: column;
@@ -108,8 +132,8 @@
 
 .ai-widget-header {
   padding: 0.85rem 1.1rem;
-  background: rgba(15, 23, 42, 0.9);
-  border-bottom: 1px solid var(--border-color, #334155);
+  background: #14121c;
+  border-bottom: 1px solid #393148;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -117,28 +141,23 @@
 .ai-widget-header-title {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: #fff;
-  font-size: 0.95rem;
+  gap: 0.65rem;
 }
-.ai-widget-status-dot {
-  width: 8px;
-  height: 8px;
-  background: #10b981;
-  border-radius: 50%;
-  display: inline-block;
-}
-.ai-widget-close-btn, .ai-widget-expand-btn {
+.ai-widget-icon-btn {
   background: transparent;
   border: none;
-  color: var(--text-muted, #94a3b8);
-  font-size: 1.2rem;
+  color: #948e9c;
   cursor: pointer;
-  padding: 0.2rem 0.4rem;
-  border-radius: 4px;
+  padding: 0.3rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
 }
-.ai-widget-close-btn:hover, .ai-widget-expand-btn:hover {
-  color: #fff;
+.ai-widget-icon-btn:hover {
+  color: #e6e0ef;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .ai-widget-body {
@@ -148,7 +167,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  background: #1c1a25;
 }
 
 .ai-msg {
@@ -160,108 +180,133 @@
 .ai-msg-user { align-self: flex-end; }
 
 .ai-msg-bubble {
-  padding: 0.65rem 0.9rem;
-  border-radius: 12px;
-  line-height: 1.45;
+  padding: 0.7rem 0.95rem;
+  border-radius: 14px;
+  line-height: 1.5;
 }
 .ai-msg-bot .ai-msg-bubble {
-  background: rgba(15, 23, 42, 0.75);
-  color: #f1f5f9;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-bottom-left-radius: 2px;
+  background: #201e29;
+  color: #e6e0ef;
+  border: 1px solid #393148;
+  border-bottom-left-radius: 3px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 .ai-msg-user .ai-msg-bubble {
-  background: var(--accent-gold, #f59e0b);
-  color: #0f172a;
-  font-weight: 500;
-  border-bottom-right-radius: 2px;
+  background: #b8a1ff;
+  color: #21005e;
+  font-weight: 600;
+  border-bottom-right-radius: 3px;
+  box-shadow: 0 4px 14px rgba(184, 161, 255, 0.35);
 }
 
 .ai-widget-card-item {
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid var(--border-color, #334155);
-  border-radius: 8px;
-  padding: 0.6rem 0.8rem;
-  margin-top: 0.4rem;
+  background: #14121c;
+  border: 1px solid #393148;
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.45rem;
 }
 .ai-widget-card-title {
+  font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
-  color: var(--accent-gold, #f59e0b);
+  color: #b8a1ff;
   font-size: 0.88rem;
 }
 .ai-widget-card-meta {
   font-size: 0.75rem;
-  color: var(--text-muted, #94a3b8);
+  color: #948e9c;
   margin-top: 0.15rem;
 }
 .ai-widget-card-desc {
-  font-size: 0.8rem;
-  color: #cbd5e1;
+  font-size: 0.78rem;
+  color: #cac4d3;
   margin-top: 0.35rem;
+  line-height: 1.4;
 }
 
 .ai-widget-suggestions {
-  padding: 0.4rem 0.75rem;
+  padding: 0.45rem 0.75rem;
   display: flex;
   gap: 0.4rem;
   overflow-x: auto;
-  background: rgba(15, 23, 42, 0.5);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: #14121c;
+  border-top: 1px solid #393148;
 }
 .ai-pill {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #cbd5e1;
-  font-size: 0.75rem;
-  padding: 0.25rem 0.6rem;
-  border-radius: 12px;
+  background: rgba(77, 63, 110, 0.3);
+  border: 1px solid rgba(184, 161, 255, 0.25);
+  color: #d2c2ff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
   cursor: pointer;
   white-space: nowrap;
+  transition: all 0.15s ease;
 }
 .ai-pill:hover {
-  background: rgba(245, 158, 11, 0.15);
-  border-color: var(--accent-gold, #f59e0b);
+  background: rgba(184, 161, 255, 0.2);
+  border-color: #b8a1ff;
   color: #fff;
 }
 
 .ai-widget-footer {
   padding: 0.75rem;
-  background: rgba(15, 23, 42, 0.95);
-  border-top: 1px solid var(--border-color, #334155);
+  background: #14121c;
+  border-top: 1px solid #393148;
   display: flex;
   gap: 0.5rem;
 }
 .ai-widget-input {
   flex: 1;
-  background: #0f172a;
-  border: 1px solid #334155;
-  color: #fff;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  font-size: 0.88rem;
+  background: #0f0d17;
+  border: 1px solid #36333f;
+  color: #e6e0ef;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.84rem;
 }
 .ai-widget-input:focus {
   outline: none;
-  border-color: var(--accent-gold, #f59e0b);
+  border-color: #b8a1ff;
+  box-shadow: 0 0 0 2px rgba(184, 161, 255, 0.2);
+}
+.ai-widget-send-btn {
+  background: #b8a1ff;
+  color: #21005e;
+  border: none;
+  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.ai-widget-send-btn:hover {
+  background: #d2c2ff;
 }
 
 .ai-feedback-bar {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.3rem;
+  margin-top: 0.4rem;
   font-size: 0.75rem;
+  align-items: center;
 }
 .ai-feedback-btn {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: var(--text-muted, #94a3b8);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #36333f;
+  color: #948e9c;
   border-radius: 6px;
-  padding: 0.1rem 0.4rem;
+  padding: 0.15rem 0.45rem;
   cursor: pointer;
+  font-size: 0.72rem;
 }
 .ai-feedback-btn:hover {
-  border-color: var(--accent-gold, #f59e0b);
-  color: #fff;
+  border-color: #b8a1ff;
+  color: #e6e0ef;
 }
 
 @media (max-width: 480px) {
@@ -310,7 +355,6 @@
     }
   });
 
-  // Global helper for opening widget from 404/500/FAQ pages
   window.openFlickPickWidget = function(prefill = '') {
     toggleWidget(true);
     if (prefill && input) {
@@ -359,7 +403,7 @@
     const typingMsg = document.createElement('div');
     typingMsg.className = 'ai-msg ai-msg-bot';
     typingMsg.id = 'ai-widget-typing';
-    typingMsg.innerHTML = `<div class="ai-msg-bubble" style="color: var(--accent-gold);">Thinking...</div>`;
+    typingMsg.innerHTML = `<div class="ai-msg-bubble" style="color: #b8a1ff;">Thinking...</div>`;
     messages.appendChild(typingMsg);
     messages.scrollTop = messages.scrollHeight;
 
@@ -387,7 +431,6 @@
 
       let contentHtml = `<div class="ai-msg-bubble">${formatReply(data.reply_text)}`;
 
-      // Append recommendation cards if present
       if (data.recommendations && data.recommendations.length > 0) {
         data.recommendations.forEach(r => {
           contentHtml += `
@@ -395,15 +438,14 @@
               <div class="ai-widget-card-title">${escapeHtml(r.title)} (${r.release_year || 'Unknown'})</div>
               <div class="ai-widget-card-meta">${escapeHtml(r.language || '')} • ${escapeHtml((r.genres || []).join(', '))}</div>
               <div class="ai-widget-card-desc">${escapeHtml(r.explanation || '')}</div>
-              <div style="margin-top: 0.3rem;"><a href="${r.detail_url}" target="_blank" style="color: var(--accent-gold); font-size: 0.75rem;">View Details ↗</a></div>
+              <div style="margin-top: 0.35rem;"><a href="${r.detail_url}" target="_blank" style="color: #b8a1ff; font-size: 0.75rem; font-weight: 600;">View Details ↗</a></div>
             </div>`;
         });
       }
 
-      // Add feedback buttons
       contentHtml += `
         <div class="ai-feedback-bar">
-          <span style="color: var(--text-muted);">Helpful?</span>
+          <span style="color: #948e9c;">Helpful?</span>
           <button type="button" class="ai-feedback-btn" onclick="window.submitWidgetFeedback(this, 'helpful', ${data.conversation_id || null})">👍 Yes</button>
           <button type="button" class="ai-feedback-btn" onclick="window.submitWidgetFeedback(this, 'unhelpful', ${data.conversation_id || null})">👎 No</button>
         </div>`;
@@ -416,8 +458,8 @@
       const errorMsg = document.createElement('div');
       errorMsg.className = 'ai-msg ai-msg-bot';
       errorMsg.innerHTML = `
-        <div class="ai-msg-bubble" style="border-color: #ef4444;">
-          ⚠️ Unable to get a response. Please check your connection or visit the <a href="/ai/" style="color: var(--accent-gold);">full AI page</a>.
+        <div class="ai-msg-bubble" style="border-color: #ff8f92;">
+          ⚠️ Unable to get a response. Please check your connection or visit the <a href="/ai/" style="color: #b8a1ff;">full AI page</a>.
         </div>`;
       messages.appendChild(errorMsg);
     }

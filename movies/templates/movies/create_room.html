@@ -1,75 +1,96 @@
 {% extends 'movies/base.html' %}
 
-{% block title %}Create Movie Night Room — FlickPick{% endblock %}
+{% block title %}Host a Movie Night Room — FlickPick{% endblock %}
 
 {% block content %}
-<div class="form-card" style="max-width: 680px;">
-  <div style="text-align: center; margin-bottom: 2rem;">
-    <span style="font-size: 2.2rem; display: block; margin-bottom: 0.5rem;">🎉</span>
-    <h1 style="font-size: 1.85rem; font-weight: 800; margin-bottom: 0.5rem;">Create a Movie-Night Room</h1>
-    <p style="color: var(--text-secondary); font-size: 0.95rem;">
-      Set up preferences for your session. You'll receive a shareable 6-digit room code to invite your friends.
-    </p>
-  </div>
+<div class="max-w-2xl mx-auto px-4 py-12">
+  <div class="bg-surface-container border border-outline-variant/60 rounded-3xl p-6 sm:p-10 shadow-2xl cinematic-glow space-y-8">
 
-  <form method="post" action="{% url 'create_room' %}">
-    {% csrf_token %}
-
-    <div class="form-group">
-      <label class="form-label" for="id_name">Room Name</label>
-      {{ form.name }}
-      {% if form.name.errors %}
-        <div class="form-error">{{ form.name.errors }}</div>
-      {% endif %}
+    <div class="text-center space-y-2">
+      <div class="w-12 h-12 rounded-2xl bg-secondary-container/80 text-primary mx-auto flex items-center justify-center text-xl shadow-[0_0_20px_rgba(184,161,255,0.4)]">
+        <span class="material-symbols-outlined text-[24px]">group_add</span>
+      </div>
+      <h1 class="font-display font-bold text-2xl sm:text-3xl text-on-surface">Host a Movie Room</h1>
+      <p class="text-xs sm:text-sm text-on-surface-variant max-w-md mx-auto">
+        Set optional genre, language, or runtime filters. You'll receive a unique 6-character room passcode to share with friends.
+      </p>
     </div>
 
-    <div class="form-group">
-      <label class="form-label" for="id_preferred_language">Preferred Language</label>
-      {{ form.preferred_language }}
-      {% if form.preferred_language.errors %}
-        <div class="form-error">{{ form.preferred_language.errors }}</div>
-      {% endif %}
-    </div>
+    <form method="post" action="{% url 'create_room' %}" class="space-y-6">
+      {% csrf_token %}
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
       <div>
-        <label class="form-label" for="id_preferred_year_min">Min Release Year</label>
-        {{ form.preferred_year_min }}
-        {% if form.preferred_year_min.errors %}
-          <div class="form-error">{{ form.preferred_year_min.errors }}</div>
+        <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2" for="id_name">
+          Room Name
+        </label>
+        {{ form.name }}
+        {% if form.name.errors %}
+          <div class="text-xs text-error mt-1">{{ form.name.errors }}</div>
         {% endif %}
       </div>
-      <div>
-        <label class="form-label" for="id_preferred_year_max">Max Release Year</label>
-        {{ form.preferred_year_max }}
-        {% if form.preferred_year_max.errors %}
-          <div class="form-error">{{ form.preferred_year_max.errors }}</div>
-        {% endif %}
-      </div>
-      <div>
-        <label class="form-label" for="id_max_runtime">Max Runtime (mins)</label>
-        {{ form.max_runtime }}
-        {% if form.max_runtime.errors %}
-          <div class="form-error">{{ form.max_runtime.errors }}</div>
-        {% endif %}
-      </div>
-    </div>
 
-    <div class="form-group">
-      <label class="form-label">Preferred Genres (optional)</label>
-      <div class="genre-checkbox-grid">
-        {% for choice in form.genres %}
-          <label class="genre-checkbox-label">
-            {{ choice.tag }}
-            <span>{{ choice.choice_label }}</span>
+      <div>
+        <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2" for="id_preferred_language">
+          Preferred Language
+        </label>
+        {{ form.preferred_language }}
+        {% if form.preferred_language.errors %}
+          <div class="text-xs text-error mt-1">{{ form.preferred_language.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2" for="id_preferred_year_min">
+            Min Year
           </label>
-        {% endfor %}
-      </div>
-    </div>
+          {{ form.preferred_year_min }}
+          {% if form.preferred_year_min.errors %}
+            <div class="text-xs text-error mt-1">{{ form.preferred_year_min.errors }}</div>
+          {% endif %}
+        </div>
 
-    <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 1rem;">
-      ✨ Generate Room &amp; Code
-    </button>
-  </form>
+        <div>
+          <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2" for="id_preferred_year_max">
+            Max Year
+          </label>
+          {{ form.preferred_year_max }}
+          {% if form.preferred_year_max.errors %}
+            <div class="text-xs text-error mt-1">{{ form.preferred_year_max.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2" for="id_max_runtime">
+            Max Runtime (m)
+          </label>
+          {{ form.max_runtime }}
+          {% if form.max_runtime.errors %}
+            <div class="text-xs text-error mt-1">{{ form.max_runtime.errors }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-3">
+          Preferred Genres (Optional)
+        </label>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto p-3 rounded-2xl bg-surface-container-lowest/80 border border-outline-variant/40 scrollbar-thin">
+          {% for choice in form.genres %}
+            <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-surface-container cursor-pointer text-xs text-on-surface-variant hover:text-on-surface transition-colors">
+              {{ choice.tag }}
+              <span>{{ choice.choice_label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <button type="submit" class="w-full bg-primary-container text-on-primary-fixed hover:bg-primary font-display font-bold text-sm py-3.5 rounded-full transition-all shadow-[0_0_24px_-4px_rgba(184,161,255,0.6)] active:scale-95 flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">add_circle</span>
+        <span>Generate Room &amp; Passcode</span>
+      </button>
+    </form>
+
+  </div>
 </div>
 {% endblock %}

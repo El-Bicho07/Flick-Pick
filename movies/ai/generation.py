@@ -206,7 +206,12 @@ def generate_deterministic_fallback(
     """
     Constructs a grounded, high-quality fallback recommendation response directly
     from verified candidate records when the LLM is unconfigured, timed out, or offline.
+    Never hallucinates ungrounded movies or attributes.
+    Excludes synthetic placeholder titles.
     """
+    from movies.models import Movie
+    candidates = [c for c in candidates if not Movie.is_placeholder_title(c.title)]
+
     if not candidates:
         reply = (
             "I searched our local catalogue, but no movies fully matched all your criteria. "
@@ -287,6 +292,9 @@ def generate_recommendations(
     Constructs prompt, queries configured provider, validates output, and ensures
     strict grounding (discarding unknown IDs and enforcing database truth).
     """
+    from movies.models import Movie
+    candidates = [c for c in candidates if not Movie.is_placeholder_title(c.title)]
+
     if not candidates:
         return generate_deterministic_fallback(candidates, preferences)
 
@@ -343,6 +351,8 @@ def generate_recommendations(
         if mid in candidates_by_id and mid not in seen_ids:
             seen_ids.add(mid)
             cand = candidates_by_id[mid]
+            if Movie.is_placeholder_title(cand.title):
+                continue
             expl = item.get("explanation") or f"Matches your criteria: {', '.join(cand.match_reasons)}"
 
             verified_attrs = {

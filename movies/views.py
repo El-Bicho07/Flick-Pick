@@ -43,9 +43,9 @@ def home(request):
     """
     Landing page showcasing FlickPick, quick room actions, and highlighted movies.
     """
-    recent_movies = Movie.objects.exclude(poster_url='').order_by('-release_year')[:8]
+    recent_movies = Movie.objects.valid_titles().exclude(poster_url='').order_by('-release_year')[:8]
     if not recent_movies.exists():
-        recent_movies = Movie.objects.order_by('-release_year')[:8]
+        recent_movies = Movie.objects.valid_titles().order_by('-release_year')[:8]
 
     user_rooms = []
     if request.user.is_authenticated:
@@ -56,7 +56,7 @@ def home(request):
     context = {
         'recent_movies': recent_movies,
         'user_rooms': user_rooms,
-        'total_movies': Movie.objects.count(),
+        'total_movies': Movie.objects.valid_titles().count(),
         'total_rooms': Room.objects.count(),
     }
     return render(request, 'movies/home.html', context)
@@ -157,7 +157,7 @@ def movie_list(request):
     Catalogue view allowing searching, filtering, and sorting over the local movie database.
     """
     form = MovieFilterForm(request.GET)
-    movies = Movie.objects.all()
+    movies = Movie.objects.valid_titles()
 
     active_room_code = request.GET.get('room')
     active_room = None
@@ -432,7 +432,7 @@ def auto_shortlist(request, code):
         return redirect('room_detail', code=room.code)
 
     # Filter movies matching room preferences
-    qs = Movie.objects.all()
+    qs = Movie.objects.valid_titles()
 
     if room.preferred_language:
         qs = qs.filter(language__iexact=room.preferred_language)
@@ -460,7 +460,7 @@ def auto_shortlist(request, code):
     suggestions = list(qs.order_by('-vote_average', '-release_year')[:20])
     if not suggestions:
         # Fallback without strict filters
-        suggestions = list(Movie.objects.exclude(id__in=existing_ids).order_by('-release_year')[:10])
+        suggestions = list(Movie.objects.valid_titles().exclude(id__in=existing_ids).order_by('-release_year')[:10])
 
     added_count = 0
     if suggestions:
@@ -721,11 +721,11 @@ def ai_chat_api(request):
     # Format recommendation items with movie details (poster, IDs, genres, etc.)
     rec_items = []
     rec_movie_ids = [r.movie_id for r in ai_response.recommendations]
-    movies_map = {m.pk: m for m in Movie.objects.filter(pk__in=rec_movie_ids)}
+    movies_map = {m.pk: m for m in Movie.objects.valid_titles().filter(pk__in=rec_movie_ids)}
 
     for r in ai_response.recommendations:
         movie = movies_map.get(r.movie_id)
-        if not movie:
+        if not movie or Movie.is_placeholder_title(movie.title):
             continue
         rec_items.append({
             'movie_id': movie.pk,

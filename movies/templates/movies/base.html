@@ -1,97 +1,181 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html class="dark" lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Modern Web Guidance: Declare color-scheme early in HTML to prevent FOUC -->
-  <meta name="color-scheme" content="light dark">
-  <title>{% block title %}FlickPick — Group Movie Picker{% endblock %}</title>
+  <meta name="color-scheme" content="dark">
+  <title>{% block title %}FlickPick — Midnight Cinema Discovery & Group Decision Suite{% endblock %}</title>
 
+  <!-- Google Fonts: Space Grotesk (Display) & Manrope (Body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Material Symbols Outlined -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "background": "#100E18",
+            "surface": "#14121c",
+            "surface-dim": "#14121c",
+            "surface-container-lowest": "#0f0d17",
+            "surface-container-low": "#1c1a25",
+            "surface-container": "#201e29",
+            "surface-container-high": "#2b2833",
+            "surface-container-highest": "#36333f",
+            "surface-variant": "#36333f",
+            "primary": "#d2c2ff",
+            "primary-container": "#b8a1ff",
+            "on-primary": "#361e75",
+            "on-primary-fixed": "#21005e",
+            "secondary": "#d0bef5",
+            "secondary-container": "#4d3f6e",
+            "on-secondary-container": "#beade3",
+            "tertiary": "#ffb9b9",
+            "tertiary-container": "#ff8f92",
+            "on-tertiary-container": "#78252c",
+            "mint": "#78d9b0",
+            "on-background": "#e6e0ef",
+            "on-surface": "#e6e0ef",
+            "on-surface-variant": "#cac4d3",
+            "outline": "#948e9c",
+            "outline-variant": "#494551",
+            "error": "#ffb4ab",
+            "error-container": "#93000a",
+          },
+          fontFamily: {
+            sans: ["Manrope", "system-ui", "sans-serif"],
+            display: ["Space Grotesk", "sans-serif"],
+            body: ["Manrope", "sans-serif"],
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "3xl": "1.5rem",
+            "full": "9999px"
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Project Stylesheet -->
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   {% block extra_css %}{% endblock %}
 </head>
-<body>
-  <!-- Header & Navigation -->
-  <header class="site-header">
-    <div class="nav-container">
-      <a href="{% url 'home' %}" class="brand-link" aria-label="FlickPick Home">
-        <svg class="brand-logo-icon" viewBox="0 0 24 24">
-          <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/>
-        </svg>
-        <span>Flick<span class="brand-highlight">Pick</span></span>
-      </a>
+<body class="bg-background text-on-background selection:bg-primary-container selection:text-surface-container-lowest antialiased min-h-screen flex flex-col font-sans">
 
-      <button class="mobile-nav-btn" aria-label="Toggle Navigation Menu" aria-expanded="false">
-        <svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2">
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
-      </button>
+  <!-- Midnight Cinema Header -->
+  <header class="sticky top-0 z-50 bg-surface-container-lowest/90 backdrop-blur-md border-b border-outline-variant/30 shadow-2xl">
+    <div class="flex justify-between items-center w-full px-4 sm:px-6 md:px-12 max-w-7xl mx-auto h-20">
 
-      <ul class="nav-links">
-        <li><a href="{% url 'ai_chat' %}" class="nav-link" style="color: var(--accent-gold); font-weight: 700;">✨ FlickPick AI</a></li>
-        <li><a href="{% url 'movie_list' %}" class="nav-link">Browse Movies</a></li>
-        <li><a href="{% url 'create_room' %}" class="nav-link">Create Room</a></li>
-        <li><a href="{% url 'join_room' %}" class="nav-link">Join Room</a></li>
-        <li><a href="{% url 'faq' %}" class="nav-link">FAQs</a></li>
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-8">
+        <a class="flex items-center gap-3 group text-decoration-none" href="{% url 'home' %}" aria-label="FlickPick Home">
+          <div class="w-10 h-10 rounded-xl bg-secondary-container/60 border border-outline-variant flex items-center justify-center text-primary group-hover:scale-105 transition-transform duration-200 shadow-[0_0_16px_-4px_rgba(184,161,255,0.4)]">
+            <span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' 1;">movie_filter</span>
+          </div>
+          <span class="font-display font-bold text-2xl tracking-tight text-primary">FlickPick</span>
+        </a>
+
+        <!-- Desktop Navigation Links -->
+        <nav class="hidden md:flex items-center gap-6">
+          <a class="text-on-surface-variant hover:text-primary font-medium text-sm transition-colors duration-200" href="{% url 'home' %}">Discover</a>
+          <a class="text-on-surface-variant hover:text-primary font-medium text-sm transition-colors duration-200" href="{% url 'movie_list' %}">Browse Movies</a>
+          <a class="text-on-surface-variant hover:text-primary font-medium text-sm transition-colors duration-200 flex items-center gap-1.5" href="{% url 'create_room' %}">
+            Group Rooms
+            <span class="w-2 h-2 rounded-full bg-tertiary-container animate-pulse"></span>
+          </a>
+          <a class="text-on-surface-variant hover:text-primary font-medium text-sm transition-colors duration-200" href="{% url 'faq' %}">FAQs</a>
+          <a class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container border border-outline-variant text-primary hover:bg-surface-container-high hover:border-primary/50 transition-colors text-sm font-semibold" href="{% url 'ai_chat' %}">
+            <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+            <span>AI Assistant</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Action Cluster -->
+      <div class="flex items-center gap-3">
+        <a href="{% url 'create_room' %}" class="hidden sm:inline-flex items-center gap-2 bg-primary-container text-on-primary-fixed hover:bg-primary px-4 py-2 rounded-full font-semibold text-xs tracking-wide transition-all shadow-[0_0_20px_-4px_rgba(184,161,255,0.4)]">
+          <span class="material-symbols-outlined text-[16px]">add</span>
+          <span>Host Room</span>
+        </a>
 
         {% if user.is_authenticated %}
-          <li><a href="{% url 'profile' %}" class="nav-link user-badge">👤 {{ user.username }}</a></li>
-          <li>
-            <form action="{% url 'logout' %}" method="post" style="display:inline;">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-secondary btn-sm">Log Out</button>
-            </form>
-          </li>
+          <a href="{% url 'profile' %}" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container border border-outline-variant text-on-surface hover:border-primary/50 text-xs font-semibold">
+            <span class="w-5 h-5 rounded-full bg-secondary-container text-primary flex items-center justify-center text-[10px] font-bold">
+              {{ user.username|slice:":2"|upper }}
+            </span>
+            <span>{{ user.username }}</span>
+          </a>
+          <form action="{% url 'logout' %}" method="post" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="p-2 text-on-surface-variant hover:text-tertiary rounded-lg transition-colors" title="Log Out">
+              <span class="material-symbols-outlined text-[20px]">logout</span>
+            </button>
+          </form>
         {% else %}
-          <li><a href="{% url 'login' %}" class="nav-link">Log In</a></li>
-          <li><a href="{% url 'register' %}" class="btn btn-primary btn-sm">Sign Up</a></li>
+          <a href="{% url 'login' %}" class="text-on-surface-variant hover:text-primary text-sm font-medium px-2 py-1">Log In</a>
+          <a href="{% url 'register' %}" class="bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface hover:text-primary px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all">Sign Up</a>
         {% endif %}
-      </ul>
+
+        <!-- Mobile Menu Button -->
+        <button class="md:hidden mobile-nav-btn p-2 text-on-surface-variant hover:text-on-surface" aria-label="Toggle Navigation Menu">
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+      </div>
     </div>
   </header>
 
+  <!-- Notification Alerts -->
+  {% if messages %}
+    <div class="messages-container" role="region" aria-label="Notifications">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }}" role="alert">
+          <span>{{ message }}</span>
+          <button type="button" class="alert-close" aria-label="Dismiss notification">&times;</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
   <!-- Main Content Area -->
   <main class="main-content" id="main-content">
-    {% if messages %}
-      <div class="messages-container" role="region" aria-label="Notifications">
-        {% for message in messages %}
-          <div class="alert alert-{{ message.tags|default:'info' }}" role="alert">
-            <span>{{ message }}</span>
-            <button type="button" class="alert-close" aria-label="Dismiss notification">&times;</button>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-
     {% block content %}{% endblock %}
   </main>
 
   <!-- Site Footer -->
-  <footer class="site-footer">
-    <div class="footer-content">
-      <div>
-        <p>&copy; {% now "Y" %} FlickPick — The Collaborative Movie Night Decision Platform.</p>
-        <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem;">
-          Academic Django Project. Datasets: GroupLens MovieLens, Indian Movies Dataset, CBFC Records.
-          {% if TMDB_ENABLED %}
-            <span>Live data provided by TMDB.</span>
-          {% endif %}
+  <footer class="bg-surface-container-lowest border-t border-outline-variant/30 py-12 px-6 md:px-12 mt-auto">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings: 'FILL' 1;">movie_filter</span>
+          <span class="font-display font-bold text-lg text-primary">FlickPick</span>
+        </div>
+        <p class="text-xs text-outline leading-relaxed max-w-xl">
+          The collaborative late-night decision engine for group movie sessions. Grounded with FastEmbed vector search, Gemini 3.5 Flash, and 10,000+ titles from MovieLens, Indian Cinema, and CBFC.
         </p>
       </div>
-      <ul class="footer-links">
-        <li><a href="{% url 'home' %}">Home</a></li>
-        <li><a href="{% url 'movie_list' %}">Catalogue</a></li>
-        <li><a href="{% url 'create_room' %}">Start a Room</a></li>
-        <li><a href="{% url 'faq' %}">FAQs</a></li>
-        <li><a href="{% url 'health_check' %}">Health</a></li>
-      </ul>
+      <div class="flex flex-wrap items-center justify-center gap-6 text-xs text-on-surface-variant">
+        <a href="{% url 'home' %}" class="hover:text-primary transition-colors">Discover</a>
+        <a href="{% url 'movie_list' %}" class="hover:text-primary transition-colors">Catalogue</a>
+        <a href="{% url 'create_room' %}" class="hover:text-primary transition-colors">Create Room</a>
+        <a href="{% url 'faq' %}" class="hover:text-primary transition-colors">FAQs</a>
+        <a href="{% url 'health_check' %}" class="hover:text-primary transition-colors">System Health</a>
+      </div>
     </div>
   </footer>
 
-  <!-- Reusable FlickPick AI Assistant Widget -->
+  <!-- Floating FlickBot Assistant Widget (Present across all screens) -->
   {% include 'movies/assistant_widget.html' %}
 
   <script src="{% static 'js/main.js' %}"></script>

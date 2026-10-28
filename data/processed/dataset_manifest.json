@@ -3,7 +3,7 @@
   "app": "FlickPick",
   "sources": {
     "movielens": {
-      "last_import_at": "2026-10-28T05:02:11.737652",
+      "last_import_at": "2026-10-28T07:12:07.512286",
       "status": "success",
       "file_path": "/home/surya-j-s/Projects/Flick_Pick/data/raw/movielens/movies.csv",
       "total_rows_read": 5,
@@ -25,7 +25,7 @@
       "notes": "Imported titles, languages, cast, director, runtime, and ratings from Indian Movies Dataset (500)."
     },
     "cbfc": {
-      "last_import_at": "2026-10-28T05:02:06.016103",
+      "last_import_at": "2026-10-28T07:12:01.108509",
       "status": "success",
       "file_path": "/home/surya-j-s/Projects/Flick_Pick/data/raw/cbfc",
       "total_rows_read": 10,

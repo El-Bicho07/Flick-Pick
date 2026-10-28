@@ -116,8 +116,9 @@ def structured_filter(preferences: ExtractedPreferences, strict_runtime: bool = 
     """
     Applies structured hard constraints against the Movie database.
     Missing metadata is never assumed to satisfy hard constraints.
+    Synthetic placeholder titles (e.g. 'Movie 323') are strictly excluded.
     """
-    qs = Movie.objects.all()
+    qs = Movie.objects.valid_titles()
 
     # 1. Languages constraint
     if preferences.languages:
@@ -192,7 +193,7 @@ def hybrid_retrieval(
         is_fallback = True
         logger.info(f"No movies matched all strict constraints. Attempting fallback relaxation.")
         # If max_runtime was strict, check if movies exist without runtime data or relax genres to any match
-        relaxed_qs = Movie.objects.all()
+        relaxed_qs = Movie.objects.valid_titles()
         if preferences.languages:
             lang_q = Q()
             for lang in preferences.languages:
@@ -213,7 +214,7 @@ def hybrid_retrieval(
     # If semantic scores exist, also retrieve top semantic matches that satisfy the core language constraint
     if semantic_scores:
         semantic_ids = [mid for mid, _ in sorted(semantic_scores.items(), key=lambda x: -x[1])[:top_k]]
-        sem_qs = Movie.objects.filter(pk__in=semantic_ids)
+        sem_qs = Movie.objects.valid_titles().filter(pk__in=semantic_ids)
         if preferences.languages:
             sem_lang_q = Q()
             for lang in preferences.languages:
@@ -235,6 +236,8 @@ def hybrid_retrieval(
     # Convert Movie model instances to CandidateMovie schema with match scores
     candidates = []
     for m in candidate_movies:
+        if Movie.is_placeholder_title(m.title):
+            continue
         sem_score = semantic_scores.get(m.pk, 0.0)
 
         # Build match reasons

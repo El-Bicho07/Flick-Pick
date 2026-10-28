@@ -4,129 +4,149 @@
 {% block title %}{{ movie.title }} — FlickPick{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 1.5rem;">
-  <a href="{% url 'movie_list' %}" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.35rem;">
-    &larr; Back to Catalogue
-  </a>
-</div>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 md:px-12 py-8 space-y-6">
 
-<div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden; display: grid; grid-template-columns: minmax(260px, 320px) 1fr; gap: 2rem; box-shadow: var(--shadow-md);">
-  <!-- Poster Column -->
-  <div style="background: #020617; padding: 1.5rem; display: flex; flex-direction: column; align-items: center;">
-    <div style="width: 100%; aspect-ratio: 2/3; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-lg);">
-      <img src="{{ movie.get_poster }}" alt="{{ movie.title }} Poster" style="width: 100%; height: 100%; object-fit: cover;">
-    </div>
-
-    <!-- Quick External Links -->
-    <div style="width: 100%; margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.4rem;">
-      <div>Source: <strong style="color: var(--text-secondary);">{{ movie.get_source_display }}</strong></div>
-      {% if movie.imdb_id %}
-        <div>
-          <a href="https://www.imdb.com/title/tt{{ movie.imdb_id }}/" target="_blank" rel="noopener noreferrer" style="color: var(--accent-gold); text-decoration: none;">
-            IMDb Profile ↗
-          </a>
-        </div>
-      {% endif %}
-      {% if movie.tmdb_id %}
-        <div>
-          <a href="https://www.themoviedb.org/movie/{{ movie.tmdb_id }}" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none;">
-            TMDB Profile ↗
-          </a>
-        </div>
-      {% endif %}
-    </div>
+  <!-- Back Link -->
+  <div>
+    <a href="{% url 'movie_list' %}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant hover:text-primary transition-colors">
+      <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+      <span>Back to Catalogue</span>
+    </a>
   </div>
 
-  <!-- Details Column -->
-  <div style="padding: 2rem 2rem 2rem 0; display: flex; flex-direction: column;">
-    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
-      <h1 style="font-size: 2.2rem; font-weight: 800; line-height: 1.2;">{{ movie.title }}</h1>
-      {% if movie.vote_average > 0 %}
-        <span style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: var(--accent-gold); font-weight: 700; padding: 0.25rem 0.6rem; border-radius: var(--radius-sm); font-size: 0.9rem;">
-          ★ {{ movie.vote_average|floatformat:1 }}
-        </span>
-      {% endif %}
-    </div>
+  <!-- Main Showcase Container -->
+  <article class="bg-surface-container border border-outline-variant/60 rounded-3xl overflow-hidden shadow-2xl cinematic-glow grid grid-cols-1 md:grid-cols-12 gap-8 relative">
+    <div class="absolute -right-24 -top-24 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
 
-    {% if movie.original_title and movie.original_title != movie.title %}
-      <p style="color: var(--text-muted); font-size: 1rem; margin-bottom: 0.75rem;">Original title: <em>{{ movie.original_title }}</em></p>
-    {% endif %}
-
-    <div style="display: flex; align-items: center; gap: 1rem; color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
-      {% if movie.release_year %}<span>📅 {{ movie.release_year }}</span>{% endif %}
-      {% if movie.runtime %}<span>⏱️ {{ movie.runtime }} mins</span>{% endif %}
-      {% if movie.language %}<span>🌐 {{ movie.language }}</span>{% endif %}
-    </div>
-
-    <!-- Genres -->
-    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem;">
-      {% for g in genres_list %}
-        <span style="background: var(--bg-card); border: 1px solid var(--border-subtle); color: var(--accent-gold); padding: 0.3rem 0.75rem; border-radius: var(--radius-full); font-size: 0.85rem; font-weight: 600;">
-          {{ g }}
-        </span>
-      {% endfor %}
-    </div>
-
-    <!-- Overview / Description -->
-    <div style="margin-bottom: 1.75rem;">
-      <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Overview</h2>
-      <p style="color: var(--text-secondary); line-height: 1.7; font-size: 1rem;">
-        {% if movie.overview %}
-          {{ movie.overview }}
-        {% elif live_details and live_details.overview %}
-          {{ live_details.overview }}
-        {% else %}
-          <em>No synopsis available in local records. This film was imported from {{ movie.get_source_display }}.</em>
-        {% endif %}
-      </p>
-    </div>
-
-    <!-- Director & Cast -->
-    {% if movie.director or movie.cast %}
-      <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.75rem;">
-        {% if movie.director %}
-          <div style="margin-bottom: 0.5rem;">
-            <strong style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase;">Director:</strong>
-            <span style="color: var(--text-primary); font-weight: 600; margin-left: 0.5rem;">{{ movie.director }}</span>
-          </div>
-        {% endif %}
-        {% if movie.cast %}
-          <div>
-            <strong style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase;">Starring:</strong>
-            <span style="color: var(--text-primary); margin-left: 0.5rem;">{{ movie.cast }}</span>
+    <!-- Poster Column (4 cols) -->
+    <div class="md:col-span-4 bg-surface-container-lowest p-6 sm:p-8 flex flex-col items-center justify-between border-b md:border-b-0 md:border-r border-outline-variant/40">
+      <div class="w-full aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl border border-outline-variant/60 relative group">
+        <img src="{{ movie.get_poster }}" alt="{{ movie.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+        {% if movie.vote_average > 0 %}
+          <div class="absolute top-3 right-3 bg-surface-container-lowest/90 backdrop-blur-md border border-amber-400/40 px-2.5 py-1 rounded-full text-xs font-bold text-amber-300">
+            ★ {{ movie.vote_average|floatformat:1 }}
           </div>
         {% endif %}
       </div>
-    {% endif %}
 
-    <!-- Nominate to Room Action -->
-    <div style="margin-top: auto; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle);">
-      <h2 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem;">Add to a Movie Night Shortlist</h2>
-      {% if user.is_authenticated %}
-        {% if available_rooms %}
-          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            {% for r in available_rooms %}
-              <form action="{% url 'add_candidate' code=r.code %}" method="post" style="display: inline;">
-                {% csrf_token %}
-                <input type="hidden" name="movie_id" value="{{ movie.pk }}">
-                <button type="submit" class="btn btn-secondary btn-sm">
-                  + Add to {{ r.name }} ({{ r.code }})
-                </button>
-              </form>
-            {% endfor %}
+      <!-- External Links & Source -->
+      <div class="w-full mt-6 space-y-2 text-xs text-outline border-t border-outline-variant/30 pt-4">
+        <div>Catalogue Source: <strong class="text-on-surface-variant">{{ movie.get_source_display }}</strong></div>
+        <div class="flex gap-4 pt-1">
+          {% if movie.imdb_id %}
+            <a href="https://www.imdb.com/title/tt{{ movie.imdb_id }}/" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline font-semibold flex items-center gap-1">
+              <span>IMDb</span>
+              <span class="material-symbols-outlined text-[12px]">open_in_new</span>
+            </a>
+          {% endif %}
+          {% if movie.tmdb_id %}
+            <a href="https://www.themoviedb.org/movie/{{ movie.tmdb_id }}" target="_blank" rel="noopener noreferrer" class="text-secondary hover:underline font-semibold flex items-center gap-1">
+              <span>TMDB</span>
+              <span class="material-symbols-outlined text-[12px]">open_in_new</span>
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Details Column (8 cols) -->
+    <div class="md:col-span-8 p-6 sm:p-8 sm:pl-0 flex flex-col justify-between space-y-6">
+      <div class="space-y-4">
+        <div>
+          <h1 class="font-display font-bold text-3xl sm:text-4xl text-on-surface tracking-tight">
+            {{ movie.title }}
+          </h1>
+          {% if movie.original_title and movie.original_title != movie.title %}
+            <p class="text-xs text-outline italic mt-1">Original: {{ movie.original_title }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Metadata Pills -->
+        <div class="flex flex-wrap items-center gap-2.5 text-xs text-on-surface-variant font-medium">
+          {% if movie.release_year %}
+            <span class="px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant">{{ movie.release_year }}</span>
+          {% endif %}
+          {% if movie.language %}
+            <span class="px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant">{{ movie.language }}</span>
+          {% endif %}
+          {% if movie.runtime %}
+            <span class="px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant">{{ movie.runtime }} mins</span>
+          {% endif %}
+        </div>
+
+        <!-- Genre Tags -->
+        <div class="flex flex-wrap gap-1.5 pt-1">
+          {% for g in genres_list %}
+            <span class="text-xs px-3 py-1 rounded-full bg-secondary-container/40 text-primary border border-primary/25 font-semibold">
+              {{ g }}
+            </span>
+          {% endfor %}
+        </div>
+
+        <!-- Overview -->
+        <div class="space-y-1.5 pt-2">
+          <h2 class="font-display font-bold text-sm uppercase tracking-wider text-outline">Synopsis</h2>
+          <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+            {% if movie.overview %}
+              {{ movie.overview }}
+            {% elif live_details and live_details.overview %}
+              {{ live_details.overview }}
+            {% else %}
+              <em class="text-outline">No synopsis recorded in local database. Film imported from {{ movie.get_source_display }}.</em>
+            {% endif %}
+          </p>
+        </div>
+
+        <!-- Director & Cast -->
+        {% if movie.director or movie.cast %}
+          <div class="p-4 rounded-2xl bg-surface-container-lowest/80 border border-outline-variant/40 space-y-2 text-xs">
+            {% if movie.director %}
+              <div>
+                <span class="text-outline uppercase tracking-wider font-semibold text-[11px]">Director:</span>
+                <span class="text-on-surface font-semibold ml-2">{{ movie.director }}</span>
+              </div>
+            {% endif %}
+            {% if movie.cast %}
+              <div>
+                <span class="text-outline uppercase tracking-wider font-semibold text-[11px]">Cast:</span>
+                <span class="text-on-surface ml-2 leading-relaxed">{{ movie.cast }}</span>
+              </div>
+            {% endif %}
           </div>
+        {% endif %}
+      </div>
+
+      <!-- Add to Room Shortlist Action -->
+      <div class="pt-6 border-t border-outline-variant/30 space-y-3">
+        <h3 class="font-display font-bold text-sm text-on-surface">Add to a Movie Night Shortlist</h3>
+        {% if user.is_authenticated %}
+          {% if available_rooms %}
+            <div class="flex flex-wrap gap-2.5">
+              {% for r in available_rooms %}
+                <form action="{% url 'add_candidate' code=r.code %}" method="post" class="inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="movie_id" value="{{ movie.pk }}">
+                  <button type="submit" class="bg-primary-container text-on-primary-fixed hover:bg-primary font-display font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-[0_0_16px_-4px_rgba(184,161,255,0.4)] flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[14px]">add</span>
+                    <span>Add to {{ r.name }} ({{ r.code }})</span>
+                  </button>
+                </form>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-xs text-outline">
+              You don't have any waiting movie rooms. <a href="{% url 'create_room' %}" class="text-primary hover:underline font-semibold">Host a new room &rarr;</a>
+            </p>
+          {% endif %}
         {% else %}
-          <p style="color: var(--text-muted); font-size: 0.9rem;">
-            You have no active waiting rooms to add this film to.
-            <a href="{% url 'create_room' %}" style="color: var(--accent-gold);">Create a new room</a>.
+          <p class="text-xs text-outline">
+            <a href="{% url 'login' %}?next={{ request.path }}" class="text-primary hover:underline font-semibold">Sign in</a> to add this film to your group room voting.
           </p>
         {% endif %}
-      {% else %}
-        <p style="color: var(--text-muted); font-size: 0.9rem;">
-          <a href="{% url 'login' %}?next={{ request.path }}" style="color: var(--accent-gold);">Log in</a> to add this movie to your room shortlist.
-        </p>
-      {% endif %}
+      </div>
+
     </div>
-  </div>
+  </article>
+
 </div>
 {% endblock %}

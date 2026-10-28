@@ -4,191 +4,265 @@
 {% block title %}{{ room.name }} ({{ room.code }}) — FlickPick{% endblock %}
 
 {% block content %}
-<!-- Room Header Card -->
-<div class="room-header-card">
-  <div>
-    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
-      <h1 style="font-size: 2rem; font-weight: 800;">{{ room.name }}</h1>
-      <span class="status-pill {{ room.status }}">{{ room.get_status_display }}</span>
-    </div>
-    <p style="color: var(--text-secondary); font-size: 0.95rem;">
-      Hosted by <strong>{{ room.host.username }}</strong> &bull;
-      {% if room.preferred_language %}{{ room.preferred_language }} &bull;{% endif %}
-      {% if room.preferred_genres %}{{ room.preferred_genres }} &bull;{% endif %}
-      Created {{ room.created_at|timesince }} ago
-    </p>
-  </div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-8 space-y-8">
 
-  <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-    <div class="room-code-badge">
-      <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Room Code</span>
-      <span class="room-code-text">{{ room.code }}</span>
-      <button type="button" class="copy-code-btn" id="copy-room-code-btn" data-code="{{ room.code }}" aria-label="Copy Room Code">Copy</button>
-    </div>
+  <!-- Room Header Card (Deep Plum #211c31) -->
+  <section class="bg-surface-container-low border border-outline-variant/50 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative overflow-hidden">
+    <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
 
-    <!-- Voting Call To Action -->
-    {% if room.status == 'VOTING' %}
-      {% if has_voted %}
-        <span class="btn btn-secondary" style="cursor: default; opacity: 0.9;">✓ Vote Submitted</span>
-      {% else %}
-        <a href="{% url 'voting' code=room.code %}" class="btn btn-primary btn-lg" style="animation: pulse 2s infinite;">🗳️ Cast Your Vote!</a>
-      {% endif %}
-    {% elif room.status == 'COMPLETED' %}
-      <a href="{% url 'results' code=room.code %}" class="btn btn-success btn-lg">🏆 View Final Results</a>
-    {% endif %}
-  </div>
-</div>
-
-<!-- Participants Row -->
-<div class="participants-section" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 2rem;">
-  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-    <h2 style="font-size: 1.05rem; font-weight: 700; color: var(--text-secondary);">
-      👥 Participants ({{ participants.count }})
-    </h2>
-    <span style="font-size: 0.8rem; color: var(--text-muted);">
-      {% if room.status == 'VOTING' %}
-        Green dot indicates participant has voted
-      {% else %}
-        Share the code above for friends to join
-      {% endif %}
-    </span>
-  </div>
-
-  <div class="participants-list">
-    {% for p in participants %}
-      <div class="participant-chip {% if p.is_host %}is-host{% endif %}">
-        {% if room.status == 'VOTING' and p.has_voted %}
-          <span class="participant-voted-dot" title="Vote recorded"></span>
-        {% endif %}
-        <span>{{ p.nickname|default:p.user.username }}</span>
-        {% if p.is_host %}
-          <span style="font-size: 0.7rem; color: var(--accent-gold); font-weight: 700;">HOST</span>
-        {% endif %}
+    <!-- Room Title & Code -->
+    <div class="space-y-2 z-10">
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider
+          {% if room.status == 'WAITING' %}bg-primary/20 text-primary border border-primary/30
+          {% elif room.status == 'VOTING' %}bg-mint/20 text-mint border border-mint/30 animate-pulse
+          {% else %}bg-secondary-container text-secondary border border-outline-variant/40{% endif %}">
+          {{ room.get_status_display }}
+        </span>
+        <h1 class="font-display font-bold text-2xl sm:text-3xl text-on-surface">{{ room.name }}</h1>
       </div>
-    {% endfor %}
-  </div>
-</div>
 
-<!-- Shortlist Candidate Movies Section -->
-<div style="margin-bottom: 2.5rem;">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
-    <div>
-      <h2 style="font-size: 1.4rem; font-weight: 800;">
-        Movie Shortlist ({{ candidates.count }})
-      </h2>
-      <p style="font-size: 0.85rem; color: var(--text-muted);">
-        {% if room.status == 'WAITING' %}
-          Nominate candidate movies before voting starts (at least 2 required).
-        {% else %}
-          Contenders in this round
-        {% endif %}
-      </p>
-    </div>
-
-    {% if room.status == 'WAITING' %}
-      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-        <!-- Auto-Shortlist Button -->
-        <form action="{% url 'auto_shortlist' code=room.code %}" method="post" style="display: inline;">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-secondary btn-sm" title="Picks movies matching room preferences automatically">
-            ✨ Auto-Suggest 5
+      <div class="flex flex-wrap items-center gap-4 text-xs text-on-surface-variant">
+        <span>Hosted by <strong class="text-on-surface">{{ room.host.username }}</strong></span>
+        <span>•</span>
+        <div class="flex items-center gap-2 bg-surface-container-high border border-outline-variant px-3 py-1 rounded-xl">
+          <span class="text-outline text-[11px] uppercase font-bold tracking-wider">Passcode:</span>
+          <span class="font-mono font-bold text-primary tracking-widest text-sm" id="roomCodeText">{{ room.code }}</span>
+          <button type="button" class="text-on-surface-variant hover:text-primary transition-colors p-0.5 active:scale-95" id="copy-room-code-btn" data-code="{{ room.code }}" title="Copy Code">
+            <span class="material-symbols-outlined text-[16px]">content_copy</span>
           </button>
-        </form>
-
-        <a href="{% url 'movie_list' %}?room={{ room.code }}" class="btn btn-primary btn-sm">
-          + Add from Catalogue
-        </a>
+        </div>
+        <span>•</span>
+        <span>{{ candidates.count }} movie{{ candidates.count|pluralize }} nominated</span>
       </div>
-    {% endif %}
-  </div>
+    </div>
 
-  {% if candidates %}
-    <div class="candidates-grid">
-      {% for c in candidates %}
-        <div class="candidate-card">
-          <div class="candidate-poster">
-            <img src="{{ c.movie.get_poster }}" alt="{{ c.movie.title }}" loading="lazy">
+    <!-- Room Action Cluster -->
+    <div class="flex flex-wrap items-center gap-3 z-10">
+      {% if room.status == 'VOTING' %}
+        {% if has_voted %}
+          <div class="flex items-center gap-2 bg-mint/15 text-mint border border-mint/30 px-5 py-2.5 rounded-full font-semibold text-xs">
+            <span class="material-symbols-outlined text-[16px]">check_circle</span>
+            <span>Vote Recorded! Awaiting Friends</span>
           </div>
-          <div class="candidate-info">
-            <h3 class="candidate-title">{{ c.movie.title }}</h3>
-            <div class="candidate-meta">
-              {% if c.movie.release_year %}{{ c.movie.release_year }} &bull;{% endif %}
-              {{ c.movie.language }}
-              {% if c.movie.runtime %}&bull; {{ c.movie.runtime }}m{% endif %}
-            </div>
+        {% else %}
+          <a href="{% url 'voting' code=room.code %}" class="btn btn-primary btn-lg text-sm shadow-[0_0_24px_-4px_rgba(184,161,255,0.6)] animate-pulse">
+            <span class="material-symbols-outlined text-[18px]">how_to_vote</span>
+            <span>Cast Your Vote</span>
+          </a>
+        {% endif %}
 
-            <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 0.75rem; color: var(--text-muted);">
-                By: {{ c.added_by.username|default:"Host" }}
-              </span>
+        {% if is_host %}
+          <form action="{% url 'tally_votes' code=room.code %}" method="post" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary text-xs" onclick="return confirm('Close voting and compute final consensus winner?');">
+              End &amp; Reveal Winner
+            </button>
+          </form>
+        {% endif %}
 
-              {% if room.status == 'WAITING' %}
-                {% if is_host or c.added_by == request.user %}
-                  <form action="{% url 'remove_candidate' code=room.code candidate_id=c.pk %}" method="post" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" title="Remove from shortlist">&times; Remove</button>
-                  </form>
+      {% elif room.status == 'WAITING' %}
+        {% if is_host %}
+          {% if candidates.count >= 2 %}
+            <form action="{% url 'start_voting' code=room.code %}" method="post" class="inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-primary btn-lg text-sm shadow-[0_0_24px_-4px_rgba(184,161,255,0.6)]">
+                <span class="material-symbols-outlined text-[18px]">play_arrow</span>
+                <span>Lock Shortlist &amp; Start Voting</span>
+              </button>
+            </form>
+          {% else %}
+            <button type="button" class="btn btn-secondary text-xs opacity-60 cursor-not-allowed" title="Add at least 2 candidates before starting vote" disabled>
+              Need &ge; 2 Movies to Vote
+            </button>
+          {% endif %}
+        {% else %}
+          <span class="text-xs text-outline italic">Waiting for host to start voting...</span>
+        {% endif %}
+
+      {% elif room.status == 'COMPLETED' %}
+        <a href="{% url 'results' code=room.code %}" class="btn btn-mint btn-lg text-sm shadow-[0_0_24px_-4px_rgba(120,217,176,0.5)]">
+          <span class="material-symbols-outlined text-[18px]">emoji_events</span>
+          <span>View Winner &amp; Consensus</span>
+        </a>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- Dual Column Layout: Candidates Shortlist (8 cols) & Room Participants / Live Consensus (4 cols) -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+    <!-- LEFT 8 COLUMNS: Shortlist Candidates -->
+    <div class="lg:col-span-8 space-y-6">
+
+      <!-- Shortlist Header Strip -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="font-display font-bold text-2xl text-on-surface flex items-center gap-2">
+            <span>Nominated Candidates</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-surface-container border border-outline-variant font-mono text-secondary">
+              {{ candidates.count }}
+            </span>
+          </h2>
+          <p class="text-xs text-outline mt-0.5">
+            {% if room.status == 'WAITING' %}
+              Add contenders to the shortlist before starting the democratic vote.
+            {% else %}
+              Shortlist locked for current voting round.
+            {% endif %}
+          </p>
+        </div>
+
+        {% if room.status == 'WAITING' %}
+          <div class="flex items-center gap-2">
+            <form action="{% url 'auto_shortlist' code=room.code %}" method="post" class="inline">
+              {% csrf_token %}
+              <button type="submit" class="bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface hover:text-primary px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all">
+                <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+                <span>Auto-Suggest 5</span>
+              </button>
+            </form>
+
+            <a href="{% url 'movie_list' %}?room={{ room.code }}" class="bg-primary-container text-on-primary-fixed hover:bg-primary px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-[0_0_16px_-4px_rgba(184,161,255,0.4)]">
+              <span class="material-symbols-outlined text-[16px]">add</span>
+              <span>Browse Vault</span>
+            </a>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Candidate Cards Grid -->
+      {% if candidates %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {% for c in candidates %}
+            <article class="bg-surface-container border border-outline-variant/60 rounded-2xl p-4 flex gap-4 items-start relative hover:border-primary/40 transition-all">
+              <div class="w-20 aspect-[2/3] rounded-xl overflow-hidden flex-shrink-0 bg-surface-container-lowest border border-outline-variant/50">
+                <img src="{{ c.movie.get_poster }}" alt="{{ c.movie.title }}" class="w-full h-full object-cover" loading="lazy">
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-1">
+                  <a href="{% url 'movie_detail' pk=c.movie.pk %}" class="font-display font-bold text-sm text-on-surface hover:text-primary truncate">
+                    {{ c.movie.title }}
+                  </a>
+                  {% if c.movie.vote_average > 0 %}
+                    <span class="text-[11px] text-amber-300 font-bold flex-shrink-0">★ {{ c.movie.vote_average|floatformat:1 }}</span>
+                  {% endif %}
+                </div>
+
+                <div class="text-[11px] text-outline mt-0.5">
+                  {% if c.movie.release_year %}{{ c.movie.release_year }}{% endif %}
+                  {% if c.movie.runtime %}• {{ c.movie.runtime }}m{% endif %}
+                  {% if c.movie.language %}• {{ c.movie.language }}{% endif %}
+                </div>
+
+                <div class="flex flex-wrap gap-1 mt-2">
+                  {% for g in c.movie.get_genres_list|slice:":2" %}
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-secondary-container/40 text-primary border border-primary/20">
+                      {{ g }}
+                    </span>
+                  {% endfor %}
+                </div>
+
+                <div class="flex items-center justify-between mt-3 pt-2 border-t border-outline-variant/30 text-[11px]">
+                  <span class="text-outline">Added by {{ c.added_by.username }}</span>
+
+                  {% if room.status == 'WAITING' and is_host %}
+                    <form action="{% url 'remove_candidate' code=room.code candidate_id=c.pk %}" method="post" class="inline">
+                      {% csrf_token %}
+                      <button type="submit" class="text-tertiary hover:underline text-[11px]" title="Remove from shortlist">
+                        Remove
+                      </button>
+                    </form>
+                  {% endif %}
+                </div>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="p-12 text-center bg-surface-container rounded-3xl border border-dashed border-outline-variant/60">
+          <span class="material-symbols-outlined text-4xl text-outline mb-2">theater_comedy</span>
+          <h3 class="font-display font-bold text-lg text-on-surface mb-1">No movies in shortlist yet</h3>
+          <p class="text-xs text-on-surface-variant max-w-sm mx-auto mb-5">
+            Add at least 2 movies so participants can vote democratically.
+          </p>
+          <div class="flex justify-center gap-3">
+            <form action="{% url 'auto_shortlist' code=room.code %}" method="post">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-secondary btn-sm text-xs">✨ Auto-Suggest 5 Movies</button>
+            </form>
+            <a href="{% url 'movie_list' %}?room={{ room.code }}" class="btn btn-primary btn-sm text-xs">+ Browse Catalogue</a>
+          </div>
+        </div>
+      {% endif %}
+
+    </div>
+
+    <!-- RIGHT 4 COLUMNS: Live Room Consensus & Squad -->
+    <aside class="lg:col-span-4 space-y-6">
+
+      <!-- Live Room Participants Card -->
+      <div class="bg-surface-container border border-outline-variant/60 rounded-3xl p-6 shadow-xl space-y-5">
+        <div class="flex justify-between items-center pb-3 border-b border-outline-variant/30">
+          <div>
+            <h3 class="font-display font-bold text-base text-on-surface">Movie Squad</h3>
+            <p class="text-[11px] text-outline">{{ participants.count }} participant{{ participants.count|pluralize }} connected</p>
+          </div>
+          <span class="w-2.5 h-2.5 rounded-full bg-mint animate-pulse"></span>
+        </div>
+
+        <!-- Participants List -->
+        <div class="space-y-2.5">
+          {% for p in participants %}
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/40">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-secondary-container text-primary flex items-center justify-center font-bold text-xs">
+                  {{ p.nickname|default:p.user.username|slice:":2"|upper }}
+                </div>
+                <div>
+                  <div class="font-display font-semibold text-xs text-on-surface">
+                    {{ p.nickname|default:p.user.username }}
+                    {% if p.is_host %}
+                      <span class="ml-1 text-[10px] text-primary font-bold">👑 HOST</span>
+                    {% endif %}
+                  </div>
+                  <div class="text-[10px] text-outline">Joined {{ p.joined_at|timesince }} ago</div>
+                </div>
+              </div>
+
+              <!-- Vote Status Indicator -->
+              {% if room.status == 'VOTING' %}
+                {% if p.has_voted %}
+                  <span class="px-2 py-0.5 rounded-full bg-mint/15 text-mint text-[10px] font-bold flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[12px]">check</span>
+                    Voted
+                  </span>
+                {% else %}
+                  <span class="px-2 py-0.5 rounded-full bg-surface-variant text-outline text-[10px] font-medium">
+                    Deciding...
+                  </span>
                 {% endif %}
               {% endif %}
             </div>
-          </div>
+          {% endfor %}
         </div>
-      {% endfor %}
-    </div>
 
-  {% else %}
-    <!-- Empty Shortlist state -->
-    <div style="background: var(--bg-surface); border: 2px dashed var(--border-subtle); border-radius: var(--radius-lg); padding: 3rem 1.5rem; text-align: center;">
-      <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🎬</div>
-      <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">Shortlist is empty!</h3>
-      <p style="color: var(--text-secondary); max-width: 440px; margin: 0 auto 1.5rem; font-size: 0.95rem;">
-        Add movies for your group to vote on. You can auto-generate suggestions based on your room's genre and language filters, or browse the catalogue.
-      </p>
-      <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-        <form action="{% url 'auto_shortlist' code=room.code %}" method="post">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-primary">✨ Auto-Suggest Contenders</button>
-        </form>
-        <a href="{% url 'movie_list' %}?room={{ room.code }}" class="btn btn-secondary">Browse Catalogue</a>
+        <!-- Invite Instructions Box -->
+        <div class="p-3.5 rounded-xl bg-surface-container-low border border-primary/20 text-xs space-y-1.5">
+          <div class="font-semibold text-primary flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">share</span>
+            <span>Invite Your Friends</span>
+          </div>
+          <p class="text-on-surface-variant leading-relaxed text-[11px]">
+            Have them visit FlickPick, click <strong>Join Room</strong>, and enter passcode <strong class="font-mono text-primary">{{ room.code }}</strong>.
+          </p>
+        </div>
       </div>
-    </div>
-  {% endif %}
-</div>
 
-<!-- Host Control Panel -->
-{% if is_host %}
-  <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.5rem; margin-top: 2rem;">
-    <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--accent-gold);">
-      👑 Host Controls
-    </h2>
-    <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
-      {% if room.status == 'WAITING' %}
-        {% if candidates.count >= 2 %}
-          <form action="{% url 'start_voting' code=room.code %}" method="post">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-primary btn-lg">▶️ Start Voting Round</button>
-          </form>
-        {% else %}
-          <button type="button" class="btn btn-secondary btn-lg" style="opacity: 0.5; cursor: not-allowed;" title="At least 2 candidates required" disabled>
-            ▶️ Start Voting Round (Add at least 2 candidates)
-          </button>
-        {% endif %}
+    </aside>
 
-      {% elif room.status == 'VOTING' %}
-        <form action="{% url 'end_voting' code=room.code %}" method="post">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-danger btn-lg">⏹️ End Voting &amp; Finalize Results</button>
-        </form>
-        <a href="{% url 'voting' code=room.code %}" class="btn btn-secondary">Go to Voting Screen</a>
-
-      {% elif room.status == 'COMPLETED' %}
-        <form action="{% url 'reset_room' code=room.code %}" method="post" onsubmit="return confirm('Reset room and restart voting?');">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-secondary">🔄 Reset &amp; Vote Again</button>
-        </form>
-        <a href="{% url 'results' code=room.code %}" class="btn btn-primary">🏆 View Results</a>
-      {% endif %}
-    </div>
   </div>
-{% endif %}
+
+</div>
 {% endblock %}

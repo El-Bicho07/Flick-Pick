@@ -3,84 +3,112 @@
 {% block title %}Frequently Asked Questions — FlickPick{% endblock %}
 
 {% block content %}
-<div class="container" style="max-width: 900px; margin: 2rem auto; padding: 0 1rem;">
-  <div style="text-align: center; margin-bottom: 2.5rem;">
-    <h1 style="font-size: 2.2rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem;">
-      Frequently Asked <span style="color: var(--accent-gold);">Questions</span>
-    </h1>
-    <p style="color: var(--text-muted); font-size: 1.05rem; max-width: 650px; margin: 0 auto;">
-      Find authoritative answers about FlickPick movie nights, room codes, voting rules, local datasets, and the AI assistant.
+<div class="max-w-4xl mx-auto px-4 sm:px-6 md:px-12 py-12 space-y-8">
+
+  <!-- Header & Search -->
+  <div class="text-center max-w-xl mx-auto space-y-3">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary-container/60 border border-primary/30 text-primary text-xs font-bold uppercase tracking-wider">
+      <span class="material-symbols-outlined text-[14px]">help</span>
+      <span>Knowledge Base</span>
+    </div>
+    <h1 class="font-display font-bold text-3xl sm:text-4xl text-on-surface">Frequently Asked Questions</h1>
+    <p class="text-xs sm:text-sm text-on-surface-variant">
+      Authoritative answers regarding room codes, voting algorithms, vector datasets, and FlickBot AI.
     </p>
 
     <!-- Search Form -->
-    <form method="get" action="{% url 'faq' %}" style="margin-top: 1.5rem; display: flex; gap: 0.5rem; justify-content: center; max-width: 500px; margin-left: auto; margin-right: auto;">
-      <input type="text" name="q" value="{{ search_query }}" placeholder="Search FAQs (e.g. voting, room code, AI)..." class="form-input" style="flex: 1; padding: 0.75rem 1rem; border-radius: 8px;">
+    <form method="get" action="{% url 'faq' %}" class="pt-2 flex gap-2 max-w-md mx-auto">
+      <div class="relative flex-1">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+        <input
+          type="text"
+          name="q"
+          value="{{ search_query }}"
+          placeholder="Search questions (e.g. voting, room code, tie)..."
+          class="w-full pl-10 pr-3 py-2.5 rounded-xl bg-surface-container-lowest border border-outline-variant text-on-surface placeholder:text-outline text-xs focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+        >
+      </div>
       {% if active_category %}
         <input type="hidden" name="category" value="{{ active_category }}">
       {% endif %}
-      <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.25rem;">Search</button>
+      <button type="submit" class="bg-primary-container text-on-primary-fixed hover:bg-primary font-display font-bold text-xs px-4 py-2.5 rounded-xl transition-all">
+        Search
+      </button>
       {% if search_query %}
-        <a href="{% url 'faq' %}{% if active_category %}?category={{ active_category }}{% endif %}" class="btn btn-secondary" style="padding: 0.75rem 1rem;">Clear</a>
+        <a href="{% url 'faq' %}{% if active_category %}?category={{ active_category }}{% endif %}" class="btn btn-secondary text-xs">Clear</a>
       {% endif %}
     </form>
   </div>
 
   <!-- Category Filter Pills -->
-  <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 2rem;">
+  <div class="flex flex-wrap gap-2 justify-center">
     <a href="{% url 'faq' %}{% if search_query %}?q={{ search_query }}{% endif %}" 
-       class="btn {% if not active_category %}btn-primary{% else %}btn-secondary{% endif %}" 
-       style="font-size: 0.85rem; padding: 0.4rem 1rem; border-radius: 20px;">
+       class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all
+       {% if not active_category %}bg-primary text-on-primary-fixed shadow-[0_0_16px_rgba(184,161,255,0.4)]
+       {% else %}bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface-variant{% endif %}">
        All Categories
     </a>
     {% for cat in categories %}
       <a href="{% url 'faq' %}?category={{ cat }}{% if search_query %}&q={{ search_query }}{% endif %}" 
-         class="btn {% if active_category == cat %}btn-primary{% else %}btn-secondary{% endif %}" 
-         style="font-size: 0.85rem; padding: 0.4rem 1rem; border-radius: 20px;">
+         class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all
+         {% if active_category == cat %}bg-primary text-on-primary-fixed shadow-[0_0_16px_rgba(184,161,255,0.4)]
+         {% else %}bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface-variant{% endif %}">
          {{ cat }}
       </a>
     {% endfor %}
   </div>
 
-  <!-- FAQ List -->
+  <!-- FAQ Accordion List -->
   {% if faqs %}
-    <div style="display: flex; flex-direction: column; gap: 1rem;">
+    <div class="space-y-3">
       {% for faq in faqs %}
-        <details class="card" style="padding: 1.25rem; border-radius: 10px; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-color);">
-          <summary style="font-weight: 700; font-size: 1.1rem; color: #fff; list-style: none; display: flex; justify-content: space-between; align-items: center;">
-            <span>{{ faq.question }}</span>
-            <span style="font-size: 0.75rem; color: var(--accent-gold); background: rgba(245, 158, 11, 0.1); padding: 0.2rem 0.6rem; border-radius: 12px; font-weight: 600;">
-              {{ faq.category }}
-            </span>
+        <details class="group bg-surface-container border border-outline-variant/60 rounded-2xl p-4 sm:p-5 transition-all hover:border-primary/40 open:border-primary/60 open:bg-surface-container-high">
+          <summary class="font-display font-bold text-sm sm:text-base text-on-surface flex justify-between items-center cursor-pointer list-none select-none">
+            <span class="group-hover:text-primary transition-colors pr-4">{{ faq.question }}</span>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-secondary-container/40 text-primary border border-primary/20 uppercase font-mono font-bold">
+                {{ faq.category }}
+              </span>
+              <span class="material-symbols-outlined text-[18px] text-outline transition-transform duration-200 group-open:rotate-180">
+                expand_more
+              </span>
+            </div>
           </summary>
-          <div style="margin-top: 1rem; color: var(--text-main); line-height: 1.6; border-top: 1px solid var(--border-color); padding-top: 1rem; font-size: 0.95rem;">
+          <div class="mt-4 pt-3 border-t border-outline-variant/30 text-xs sm:text-sm text-on-surface-variant leading-relaxed">
             {{ faq.answer|linebreaks }}
           </div>
         </details>
       {% endfor %}
     </div>
   {% else %}
-    <div class="card" style="text-align: center; padding: 3rem 1rem;">
-      <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 1rem;">
-        No questions matched your search criteria.
-      </p>
-      <a href="{% url 'faq' %}" class="btn btn-secondary">Reset Filters</a>
+    <div class="p-12 text-center bg-surface-container rounded-3xl border border-dashed border-outline-variant/60">
+      <span class="material-symbols-outlined text-4xl text-outline mb-2">search_off</span>
+      <h3 class="font-display font-bold text-lg text-on-surface mb-1">No FAQs matched your search</h3>
+      <p class="text-xs text-on-surface-variant mb-4">Try different keywords or ask FlickBot AI directly.</p>
+      <a href="{% url 'faq' %}" class="btn btn-secondary text-xs">Reset Filters</a>
     </div>
   {% endif %}
 
-  <!-- Support Ticket & Assistant Callout -->
-  <div class="card" style="margin-top: 3rem; padding: 2rem; border-radius: 12px; background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)); border: 1px solid var(--border-color); text-align: center;">
-    <h3 style="color: #fff; margin-bottom: 0.5rem; font-size: 1.3rem;">Still have a question?</h3>
-    <p style="color: var(--text-muted); font-size: 0.95rem; max-width: 550px; margin: 0 auto 1.5rem auto;">
-      Ask FlickPick AI directly using the floating assistant widget, or open a support ticket for our engineering team.
-    </p>
-    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-      <a href="{% url 'ai_chat' %}" class="btn btn-primary">
-        ✨ Open FlickPick AI Chat
+  <!-- Support & FlickBot Callout Box -->
+  <div class="bg-[#211C31] border border-outline-variant/60 rounded-3xl p-6 sm:p-8 cinematic-glow text-center space-y-4">
+    <div class="w-10 h-10 rounded-xl bg-secondary-container text-primary mx-auto flex items-center justify-center">
+      <span class="material-symbols-outlined text-[22px]">smart_toy</span>
+    </div>
+    <div>
+      <h3 class="font-display font-bold text-lg text-on-surface">Didn't find what you need?</h3>
+      <p class="text-xs text-on-surface-variant max-w-md mx-auto mt-1">
+        Ask FlickBot AI directly or open a support ticket for our engineering team.
+      </p>
+    </div>
+    <div class="flex justify-center gap-3 pt-2">
+      <a href="{% url 'ai_chat' %}" class="btn btn-primary text-xs">
+        ✨ Open FlickBot AI Chat
       </a>
-      <button type="button" class="btn btn-secondary" onclick="if(window.openFlickPickWidget){window.openFlickPickWidget('I have a question about FlickPick');}">
-        💬 Quick Assistant
+      <button type="button" class="btn btn-secondary text-xs" onclick="if(window.openFlickPickWidget){window.openFlickPickWidget('I have a question about FlickPick');}">
+        💬 Quick Ask Widget
       </button>
     </div>
   </div>
+
 </div>
 {% endblock %}

@@ -1,9 +1,16 @@
 import random
+import re
 import string
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db.models import Count
+
+
+class MovieQuerySet(models.QuerySet):
+    def valid_titles(self):
+        """Excludes synthetic placeholder titles such as 'Movie 323' from imported datasets."""
+        return self.exclude(title__regex=r'^Movie[\s_-]*[0-9]+$')
 
 
 class Movie(models.Model):
@@ -18,6 +25,8 @@ class Movie(models.Model):
         ('tmdb', 'The Movie Database (TMDB)'),
         ('manual', 'Manual Entry'),
     ]
+
+    objects = MovieQuerySet.as_manager()
 
     title = models.CharField(max_length=255, db_index=True)
     original_title = models.CharField(max_length=255, blank=True)
@@ -66,6 +75,13 @@ class Movie(models.Model):
         if self.poster_url:
             return self.poster_url
         return "/static/images/default-poster.svg"
+
+    @classmethod
+    def is_placeholder_title(cls, title: str) -> bool:
+        """Checks if a title matches placeholder patterns like 'Movie 323'."""
+        if not title:
+            return True
+        return bool(re.match(r"^Movie[\s_-]*[0-9]+$", title.strip(), re.IGNORECASE))
 
 
 class Room(models.Model):

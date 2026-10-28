@@ -1,143 +1,162 @@
 {% extends 'movies/base.html' %}
+{% load static %}
 
 {% block title %}Results: {{ room.name }} — FlickPick{% endblock %}
 
 {% block content %}
-<div style="max-width: 860px; margin: 0 auto;">
-  <div style="text-align: center; margin-bottom: 2rem;">
-    <span class="status-pill COMPLETED" style="margin-bottom: 0.75rem;">Decision Finalized</span>
-    <h1 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem;">Movie Night Pick Results</h1>
-    <p style="color: var(--text-secondary); font-size: 1rem;">
-      Room: <strong>{{ room.name }} ({{ room.code }})</strong> &bull; Total Votes Cast: <strong>{{ total_votes }}</strong>
+<div class="max-w-4xl mx-auto px-4 sm:px-6 md:px-12 py-10 space-y-10">
+
+  <!-- Header Banner -->
+  <div class="text-center max-w-xl mx-auto space-y-2">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-mint/15 text-mint border border-mint/30 text-xs font-bold uppercase tracking-wider">
+      <span class="material-symbols-outlined text-[14px]">emoji_events</span>
+      <span>Consensus Decided</span>
+    </div>
+    <h1 class="font-display font-bold text-3xl sm:text-4xl text-on-surface">Tonight's Official Selection</h1>
+    <p class="text-xs sm:text-sm text-on-surface-variant">
+      Room: <strong class="text-on-surface">{{ room.name }}</strong> • Total Votes: <strong class="text-primary font-mono">{{ total_votes }}</strong>
     </p>
   </div>
 
   {% if is_tie %}
     <!-- Tie Outcome Card -->
-    <div class="results-hero-card" style="border-color: var(--accent-blue); background: linear-gradient(180deg, rgba(56, 189, 248, 0.15) 0%, rgba(18, 24, 36, 0.9) 100%);">
-      <div class="winner-crown-icon">🤝</div>
-      <h2 style="font-size: 1.8rem; font-weight: 800; color: var(--accent-blue); margin-bottom: 0.5rem;">It's a Tie!</h2>
-      <p style="color: var(--text-secondary); max-width: 520px; margin: 0 auto 1.5rem; font-size: 1rem;">
-        The group was split equally! The following movies tied with <strong>{{ max_votes }} vote{{ max_votes|pluralize }}</strong> each:
-      </p>
+    <div class="bg-[#211C31] border border-primary/40 rounded-3xl p-8 cinematic-glow text-center space-y-6">
+      <div class="w-16 h-16 rounded-2xl bg-secondary-container/80 text-primary mx-auto flex items-center justify-center text-3xl shadow-[0_0_20px_rgba(184,161,255,0.4)]">
+        🤝
+      </div>
+      <div>
+        <h2 class="font-display font-bold text-2xl text-primary">It's a Dead Heat Tie!</h2>
+        <p class="text-xs text-on-surface-variant mt-1 max-w-md mx-auto">
+          The squad was split right down the middle with <strong>{{ max_votes }} vote{{ max_votes|pluralize }}</strong> each.
+        </p>
+      </div>
 
-      <div style="display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-lg mx-auto">
         {% for w in winners %}
-          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; width: 200px; text-align: center;">
-            <div style="aspect-ratio: 2/3; border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 0.75rem;">
-              <img src="{{ w.movie.get_poster }}" alt="{{ w.movie.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+          <div class="bg-surface-container-lowest/80 border border-outline-variant/60 rounded-2xl p-4 text-center space-y-3">
+            <div class="aspect-[2/3] w-28 mx-auto rounded-xl overflow-hidden shadow-lg border border-outline-variant/40">
+              <img src="{{ w.movie.get_poster }}" alt="{{ w.movie.title }}" class="w-full h-full object-cover">
             </div>
-            <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">{{ w.movie.title }}</h3>
-            <span style="font-size: 0.85rem; color: var(--accent-blue); font-weight: 600;">{{ w.tally }} Votes</span>
+            <div>
+              <h3 class="font-display font-bold text-sm text-on-surface">{{ w.movie.title }}</h3>
+              <div class="text-xs text-mint font-semibold font-mono mt-1">{{ w.tally }} Votes</div>
+            </div>
           </div>
         {% endfor %}
       </div>
     </div>
 
   {% elif winners %}
-    <!-- Single Clear Winner -->
+    <!-- Single Clear Winner Hero Showcase -->
     {% with winner=winners.0 %}
-      <div class="results-hero-card">
-        <div class="winner-crown-icon">👑</div>
-        <span style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 2px; color: var(--accent-gold); font-weight: 700;">Tonight's Winning Movie</span>
-        <h2 class="winner-movie-title">{{ winner.movie.title }}</h2>
+      <article class="bg-[#211C31] border border-mint/40 rounded-3xl p-6 sm:p-10 cinematic-glow relative overflow-hidden text-center space-y-6">
+        <div class="absolute -right-24 -top-24 w-80 h-80 bg-mint/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        <p style="color: var(--text-secondary); font-size: 1.05rem; margin-bottom: 1.5rem;">
-          Won with <strong>{{ max_votes }} vote{{ max_votes|pluralize }}</strong> out of {{ total_votes }} total vote{{ total_votes|pluralize }}.
-        </p>
-
-        <div style="max-width: 220px; margin: 0 auto 1.5rem; aspect-ratio: 2/3; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-lg);">
-          <img src="{{ winner.movie.get_poster }}" alt="{{ winner.movie.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-mint/20 text-mint border border-mint/40 text-xs font-display font-bold uppercase tracking-wider mint-glow">
+          <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+          <span>Room Winner • {{ max_votes }} of {{ total_votes }} Votes</span>
         </div>
 
-        <div style="display: flex; gap: 1rem; justify-content: center; color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1rem;">
-          {% if winner.movie.release_year %}<span>📅 {{ winner.movie.release_year }}</span>{% endif %}
-          <span>🌐 {{ winner.movie.language }}</span>
-          {% if winner.movie.runtime %}<span>⏱️ {{ winner.movie.runtime }}m</span>{% endif %}
+        <h2 class="font-display font-bold text-3xl sm:text-5xl text-on-surface tracking-tight">
+          {{ winner.movie.title }}
+        </h2>
+
+        <!-- Movie Poster Showcase -->
+        <div class="w-48 sm:w-56 aspect-[2/3] mx-auto rounded-2xl overflow-hidden shadow-2xl border border-outline-variant/60 relative group">
+          <img src="{{ winner.movie.get_poster }}" alt="{{ winner.movie.title }}" class="w-full h-full object-cover">
+          {% if winner.movie.vote_average > 0 %}
+            <div class="absolute top-2.5 right-2.5 bg-surface-container-lowest/90 backdrop-blur-md border border-amber-400/40 px-2.5 py-1 rounded-full text-xs font-bold text-amber-300">
+              ★ {{ winner.movie.vote_average|floatformat:1 }}
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Metadata Pills -->
+        <div class="flex flex-wrap justify-center items-center gap-3 text-xs text-on-surface-variant font-medium">
+          {% if winner.movie.release_year %}
+            <span class="px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant">{{ winner.movie.release_year }}</span>
+          {% endif %}
+          {% if winner.movie.language %}
+            <span class="px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant">{{ winner.movie.language }}</span>
+          {% endif %}
+          {% if winner.movie.runtime %}
+            <span class="px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant">{{ winner.movie.runtime }} mins</span>
+          {% endif %}
         </div>
 
         {% if winner.movie.overview %}
-          <p style="max-width: 600px; margin: 0 auto 1.5rem; color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6;">
+          <p class="text-xs sm:text-sm text-on-surface-variant max-w-xl mx-auto leading-relaxed">
             {{ winner.movie.overview }}
           </p>
         {% endif %}
 
-        <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-          <a href="{% url 'movie_detail' pk=winner.movie.pk %}" class="btn btn-secondary">Full Movie Details</a>
+        <div class="flex justify-center gap-3 pt-3">
+          <a href="{% url 'movie_detail' pk=winner.movie.pk %}" class="btn btn-primary text-xs">
+            View Full Film Details
+          </a>
           {% if winner.movie.imdb_id %}
-            <a href="https://www.imdb.com/title/tt{{ winner.movie.imdb_id }}/" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">IMDb Profile ↗</a>
+            <a href="https://www.imdb.com/title/tt{{ winner.movie.imdb_id }}/" target="_blank" rel="noopener noreferrer" class="btn btn-secondary text-xs">
+              IMDb ↗
+            </a>
           {% endif %}
         </div>
-      </div>
+      </article>
     {% endwith %}
 
   {% else %}
-    <!-- No candidates or no votes -->
-    <div style="background: var(--bg-surface); border: 1px dashed var(--border-subtle); border-radius: var(--radius-lg); padding: 3rem 1.5rem; text-align: center; margin-bottom: 2rem;">
-      <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🤷</div>
-      <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem;">No votes were recorded</h2>
-      <p style="color: var(--text-secondary);">No winner could be determined for this room session.</p>
+    <div class="p-12 text-center bg-surface-container rounded-3xl border border-dashed border-outline-variant/60">
+      <span class="material-symbols-outlined text-4xl text-outline mb-2">how_to_vote</span>
+      <h2 class="font-display font-bold text-lg text-on-surface mb-1">No votes were recorded</h2>
+      <p class="text-xs text-on-surface-variant">No winning movie could be computed for this room round.</p>
     </div>
   {% endif %}
 
-  <!-- Detailed Voting Leaderboard Table -->
-  <div class="tally-table-card">
-    <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.25rem;">Full Vote Breakdown</h2>
-    <table class="tally-table">
-      <thead>
-        <tr>
-          <th style="width: 50px;">#</th>
-          <th>Movie Contender</th>
-          <th style="width: 120px;">Votes</th>
-          <th style="width: 150px;">Share</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in candidates_ranked %}
-          <tr>
-            <td style="font-weight: 700; color: var(--text-muted);">{{ forloop.counter }}</td>
-            <td>
-              <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <div style="width: 36px; height: 54px; border-radius: var(--radius-sm); overflow: hidden; background: #020617; flex-shrink: 0;">
-                  <img src="{{ c.movie.get_poster }}" alt="{{ c.movie.title }}" style="width: 100%; height: 100%; object-fit: cover;">
-                </div>
-                <div>
-                  <a href="{% url 'movie_detail' pk=c.movie.pk %}" style="color: var(--text-primary); font-weight: 600; text-decoration: none;">
-                    {{ c.movie.title }}
-                  </a>
-                  <div style="font-size: 0.75rem; color: var(--text-muted);">
-                    {{ c.movie.language }} {% if c.movie.release_year %}({{ c.movie.release_year }}){% endif %}
-                  </div>
-                </div>
-              </div>
-            </td>
-            <td style="font-weight: 700; font-size: 1rem; color: var(--accent-gold);">
-              {{ c.tally }} vote{{ c.tally|pluralize }}
-            </td>
-            <td>
-              <div class="vote-bar-bg">
-                <div class="vote-bar-fill" style="width: {% if total_votes > 0 %}{% widthratio c.tally total_votes 100 %}{% else %}0{% endif %}%;"></div>
-              </div>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  <!-- Full Vote Breakdown Table -->
+  <div class="bg-surface-container border border-outline-variant/60 rounded-3xl p-6 sm:p-8 space-y-4">
+    <div class="flex justify-between items-center pb-3 border-b border-outline-variant/30">
+      <h3 class="font-display font-bold text-lg text-on-surface">Democratic Vote Breakdown</h3>
+      <span class="text-xs text-outline">{{ candidates_ranked|length }} contender{{ candidates_ranked|pluralize }}</span>
+    </div>
 
-  <!-- Bottom Navigation Actions -->
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; flex-wrap: wrap; gap: 1rem;">
-    <a href="{% url 'room_detail' code=room.code %}" class="btn btn-secondary">&larr; Back to Room</a>
+    <div class="space-y-3">
+      {% for c in candidates_ranked %}
+        <div class="p-3.5 rounded-2xl bg-surface-container-lowest/80 border border-outline-variant/40 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="font-mono font-bold text-xs text-outline w-5 text-center">{{ forloop.counter }}</span>
+            <div class="w-10 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container">
+              <img src="{{ c.movie.get_poster }}" alt="{{ c.movie.title }}" class="w-full h-full object-cover">
+            </div>
+            <div class="min-w-0">
+              <h4 class="font-display font-bold text-xs text-on-surface truncate">{{ c.movie.title }}</h4>
+              <div class="text-[10px] text-outline">{{ c.movie.language }} • {{ c.movie.release_year }}</div>
+            </div>
+          </div>
 
-    <div style="display: flex; gap: 0.75rem;">
-      {% if is_host %}
-        <form action="{% url 'reset_room' code=room.code %}" method="post">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-secondary">🔄 Reset Room &amp; Vote Again</button>
-        </form>
-      {% endif %}
-      <a href="{% url 'create_room' %}" class="btn btn-primary">✨ Create New Room</a>
+          <div class="flex items-center gap-4 flex-shrink-0">
+            <div class="text-right">
+              <div class="font-mono font-bold text-xs text-primary">{{ c.vote_tally }} vote{{ c.vote_tally|pluralize }}</div>
+              <div class="text-[10px] text-outline font-mono">
+                {% if total_votes > 0 %}
+                  {% widthratio c.vote_tally total_votes 100 %}%
+                {% else %}
+                  0%
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="pt-6 flex justify-between items-center border-t border-outline-variant/30">
+      <a href="{% url 'room_detail' code=room.code %}" class="btn btn-secondary text-xs">
+        &larr; Back to Room
+      </a>
+      <a href="{% url 'create_room' %}" class="btn btn-primary text-xs">
+        Start Another Movie Session &rarr;
+      </a>
     </div>
   </div>
+
 </div>
 {% endblock %}

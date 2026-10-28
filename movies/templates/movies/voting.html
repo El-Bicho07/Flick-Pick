@@ -1,73 +1,128 @@
 {% extends 'movies/base.html' %}
+{% load static %}
 
 {% block title %}Cast Your Vote — {{ room.name }} — FlickPick{% endblock %}
 
 {% block content %}
-<div class="voting-container">
-  <div style="text-align: center; margin-bottom: 2rem;">
-    <span class="status-pill VOTING" style="margin-bottom: 0.75rem;">Voting In Progress</span>
-    <h1 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem;">Pick Your Favorite Movie</h1>
-    <p style="color: var(--text-secondary); font-size: 1rem; max-width: 540px; margin: 0 auto;">
-      Room: <strong>{{ room.name }} ({{ room.code }})</strong>.
-      Choose one movie from the shortlist below. You have <strong>1 vote</strong>.
+<div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-8 space-y-8">
+
+  <!-- Header Banner -->
+  <div class="text-center max-w-2xl mx-auto space-y-2">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-mint/15 text-mint border border-mint/30 text-xs font-bold uppercase tracking-wider">
+      <span class="w-2 h-2 rounded-full bg-mint animate-ping"></span>
+      <span>Live Democratic Voting</span>
+    </div>
+    <h1 class="font-display font-bold text-3xl sm:text-4xl text-on-surface">Pick Your Movie for Tonight</h1>
+    <p class="text-xs sm:text-sm text-on-surface-variant">
+      Room: <strong class="text-on-surface">{{ room.name }}</strong> (<span class="font-mono text-primary font-bold">{{ room.code }}</span>).
+      Select your top choice from the nominated candidates below.
     </p>
   </div>
 
-  <form method="post" action="{% url 'voting' code=room.code %}" id="voting-form">
+  <form method="post" action="{% url 'voting' code=room.code %}" id="votingForm" class="space-y-8">
     {% csrf_token %}
 
-    <div class="voting-options-list" role="radiogroup" aria-label="Candidate movies to vote on">
+    <!-- Candidate Decision Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" role="radiogroup" aria-label="Movies to vote on">
       {% for c in candidates %}
-        <label class="voting-option-label" for="candidate-{{ c.pk }}">
+        <label
+          for="candidate-{{ c.pk }}"
+          class="candidate-vote-card relative bg-surface-container border border-outline-variant/60 rounded-3xl p-5 flex gap-5 cursor-pointer transition-all hover:border-primary/50 hover:bg-surface-container-high group"
+        >
+          <!-- Hidden Radio -->
           <input
             type="radio"
             name="candidate_id"
             id="candidate-{{ c.pk }}"
             value="{{ c.pk }}"
-            class="voting-option-input"
+            class="sr-only candidate-radio"
             required
-            style="transform: scale(1.3); cursor: pointer;"
           >
 
-          <div class="voting-option-poster">
-            <img src="{{ c.movie.get_poster }}" alt="{{ c.movie.title }}" loading="lazy">
+          <!-- Movie Poster (2:3 Aspect) -->
+          <div class="w-28 sm:w-36 aspect-[2/3] rounded-2xl overflow-hidden flex-shrink-0 bg-surface-container-lowest border border-outline-variant/50 relative shadow-lg">
+            <img src="{{ c.movie.get_poster }}" alt="{{ c.movie.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
+            {% if c.movie.vote_average > 0 %}
+              <div class="absolute top-2 left-2 bg-surface-container-lowest/90 backdrop-blur-md border border-amber-400/40 px-2 py-0.5 rounded-full text-[10px] font-bold text-amber-300">
+                ★ {{ c.movie.vote_average|floatformat:1 }}
+              </div>
+            {% endif %}
           </div>
 
-          <div style="flex: 1;">
-            <div style="display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;">
-              <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin: 0;">
-                {{ c.movie.title }}
-              </h2>
-              {% if c.movie.release_year %}
-                <span style="color: var(--text-muted); font-size: 0.9rem;">({{ c.movie.release_year }})</span>
+          <!-- Movie Info -->
+          <div class="flex-1 min-w-0 flex flex-col justify-between">
+            <div class="space-y-1.5">
+              <div class="flex items-start justify-between gap-2">
+                <h2 class="font-display font-bold text-lg text-on-surface group-hover:text-primary transition-colors">
+                  {{ c.movie.title }}
+                </h2>
+                <div class="vote-check-indicator w-6 h-6 rounded-full border border-outline-variant flex items-center justify-center flex-shrink-0 group-hover:border-primary transition-all">
+                  <span class="material-symbols-outlined text-[16px] text-transparent select-none">check</span>
+                </div>
+              </div>
+
+              <div class="text-xs text-outline font-medium">
+                {% if c.movie.release_year %}{{ c.movie.release_year }}{% endif %}
+                {% if c.movie.runtime %}• {{ c.movie.runtime }}m{% endif %}
+                {% if c.movie.language %}• {{ c.movie.language }}{% endif %}
+              </div>
+
+              <div class="flex flex-wrap gap-1 pt-1">
+                {% for g in c.movie.get_genres_list|slice:":3" %}
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-secondary-container/30 text-primary border border-primary/20">
+                    {{ g }}
+                  </span>
+                {% endfor %}
+              </div>
+
+              {% if c.movie.overview %}
+                <p class="text-xs text-on-surface-variant line-clamp-3 pt-2 leading-relaxed">
+                  {{ c.movie.overview }}
+                </p>
               {% endif %}
             </div>
 
-            <div style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.25rem 0 0.5rem;">
-              {{ c.movie.language }}
-              {% if c.movie.runtime %}&bull; {{ c.movie.runtime }} mins{% endif %}
-              {% if c.movie.vote_average > 0 %}&bull; ★ {{ c.movie.vote_average|floatformat:1 }}{% endif %}
+            <div class="pt-3 text-[11px] text-outline border-t border-outline-variant/30 flex justify-between items-center">
+              <span>Nominated candidate</span>
+              <span class="text-primary font-semibold group-hover:underline">Select &rarr;</span>
             </div>
-
-            {% if c.movie.overview %}
-              <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                {{ c.movie.overview }}
-              </p>
-            {% endif %}
           </div>
         </label>
       {% endfor %}
     </div>
 
-    <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.25rem; margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-      <a href="{% url 'room_detail' code=room.code %}" class="btn btn-secondary">
-        &larr; Cancel / Return to Room
+    <!-- Vote Submit Action Bar -->
+    <div class="sticky bottom-6 z-40 max-w-xl mx-auto bg-surface-container-low/95 backdrop-blur-md border border-primary/40 rounded-full p-2.5 shadow-2xl flex items-center justify-between gap-4">
+      <a href="{% url 'room_detail' code=room.code %}" class="px-5 py-2 text-xs font-semibold text-on-surface-variant hover:text-on-surface transition-colors">
+        Cancel
       </a>
 
-      <button type="submit" class="btn btn-primary btn-lg" style="min-width: 200px;">
-        🗳️ Submit My Vote
+      <button
+        type="submit"
+        class="bg-primary-container text-on-primary-fixed hover:bg-primary font-display font-bold text-sm px-8 py-3 rounded-full transition-all shadow-[0_0_24px_-4px_rgba(184,161,255,0.6)] flex items-center gap-2 active:scale-95"
+      >
+        <span class="material-symbols-outlined text-[18px]">how_to_vote</span>
+        <span>Confirm My Vote</span>
       </button>
     </div>
+
   </form>
 </div>
+
+<style>
+  /* Radio selection visual styling */
+  .candidate-radio:checked + div,
+  .candidate-vote-card:has(.candidate-radio:checked) {
+    border-color: #b8a1ff !important;
+    background: #252037 !important;
+    box-shadow: 0 0 30px -5px rgba(184, 161, 255, 0.35) !important;
+  }
+  .candidate-vote-card:has(.candidate-radio:checked) .vote-check-indicator {
+    background: #b8a1ff !important;
+    border-color: #b8a1ff !important;
+  }
+  .candidate-vote-card:has(.candidate-radio:checked) .vote-check-indicator span {
+    color: #21005e !important;
+  }
+</style>
 {% endblock %}

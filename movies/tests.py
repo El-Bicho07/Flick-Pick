@@ -1127,3 +1127,77 @@ class VectorStoreFallbackTests(TestCase):
             self.assertEqual(candidates[0].movie_id, self.movie.pk)
         finally:
             vstore._embeddings = original_embeddings
+
+
+# ==============================================================================
+# AI Intent Routing & Placeholder Exclusion Tests
+# ==============================================================================
+
+class AIIntentAndPlaceholderTests(TestCase):
+    def setUp(self):
+        self.real_movie = Movie.objects.create(
+            title="Interstellar",
+            language="English",
+            genres="Sci-Fi, Adventure",
+            runtime=169,
+            release_year=2014,
+            vote_average=8.6,
+            vote_count=32000
+        )
+        self.placeholder_movie = Movie.objects.create(
+            title="Movie 323",
+            language="Hindi",
+            genres="Romance",
+            runtime=120,
+            release_year=2020,
+            vote_average=9.0,
+            vote_count=227000
+        )
+
+    def test_greeting_intent_returns_no_unsolicited_movies(self):
+        for greeting in ["hi", "hello", "hey there", "good morning", "yo"]:
+            intent = classify_intent(greeting)
+            self.assertEqual(intent, "greeting", f"Failed for '{greeting}'")
+
+            resp = get_ai_recommendations(greeting)
+            self.assertEqual(resp.intent, "greeting")
+            self.assertEqual(len(resp.recommendations), 0, f"Greeting '{greeting}' returned unsolicited movies!")
+            self.assertIn("FlickBot", resp.reply_text)
+
+    def test_farewell_and_gratitude_return_no_movies(self):
+        thanks_resp = get_ai_recommendations("thanks for your help!")
+        self.assertEqual(thanks_resp.intent, "gratitude")
+        self.assertEqual(len(thanks_resp.recommendations), 0)
+
+        bye_resp = get_ai_recommendations("bye, see you later")
+        self.assertEqual(bye_resp.intent, "farewell")
+        self.assertEqual(len(bye_resp.recommendations), 0)
+
+    def test_general_conversation_returns_no_movies(self):
+        resp = get_ai_recommendations("who are you and what can you do?")
+        self.assertEqual(resp.intent, "general_conversation")
+        self.assertEqual(len(resp.recommendations), 0)
+        self.assertIn("FlickBot", resp.reply_text)
+
+    def test_movie_recommendation_intent_triggers_retrieval(self):
+        intent = classify_intent("recommend a sci-fi adventure movie")
+        self.assertEqual(intent, "movie_recommendation")
+
+    def test_placeholder_title_detector(self):
+        self.assertTrue(Movie.is_placeholder_title("Movie 323"))
+        self.assertTrue(Movie.is_placeholder_title("Movie 12"))
+        self.assertTrue(Movie.is_placeholder_title("Movie_500"))
+        self.assertFalse(Movie.is_placeholder_title("Inception"))
+        self.assertFalse(Movie.is_placeholder_title("Movie Alpha"))
+
+    def test_valid_titles_queryset_excludes_placeholders(self):
+        valid_qs = Movie.objects.valid_titles()
+        self.assertTrue(valid_qs.filter(pk=self.real_movie.pk).exists())
+        self.assertFalse(valid_qs.filter(pk=self.placeholder_movie.pk).exists())
+
+    def test_movie_list_catalogue_view_excludes_placeholders(self):
+        client = Client()
+        res = client.get(reverse('movie_list'))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "Interstellar")
+        self.assertNotContains(res, "Movie 323")

@@ -3,42 +3,53 @@
 {% block title %}Log In — FlickPick{% endblock %}
 
 {% block content %}
-<div class="form-card" style="max-width: 440px;">
-  <div style="text-align: center; margin-bottom: 2rem;">
-    <span style="font-size: 2.2rem; display: block; margin-bottom: 0.5rem;">🍿</span>
-    <h1 style="font-size: 1.85rem; font-weight: 800; margin-bottom: 0.5rem;">Welcome Back</h1>
-    <p style="color: var(--text-secondary); font-size: 0.95rem;">
-      Log in to manage your movie-night rooms and vote.
-    </p>
+<div class="max-w-md mx-auto px-4 py-16">
+  <div class="bg-surface-container border border-outline-variant/60 rounded-3xl p-6 sm:p-10 shadow-2xl cinematic-glow space-y-6">
+
+    <div class="text-center space-y-2">
+      <div class="w-12 h-12 rounded-2xl bg-secondary-container/80 text-primary mx-auto flex items-center justify-center text-xl shadow-[0_0_20px_rgba(184,161,255,0.4)]">
+        <span class="material-symbols-outlined text-[24px]">lock</span>
+      </div>
+      <h1 class="font-display font-bold text-2xl text-on-surface">Welcome Back</h1>
+      <p class="text-xs text-on-surface-variant">
+        Sign in to manage your movie-night rooms and vote.
+      </p>
+    </div>
+
+    <form method="post" action="{% url 'login' %}" class="space-y-4">
+      {% csrf_token %}
+
+      <div>
+        <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2" for="id_username">
+          Username
+        </label>
+        {{ form.username }}
+        {% if form.username.errors %}
+          <div class="text-xs text-error mt-1">{{ form.username.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2" for="id_password">
+          Password
+        </label>
+        {{ form.password }}
+        {% if form.password.errors %}
+          <div class="text-xs text-error mt-1">{{ form.password.errors }}</div>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="w-full bg-primary-container text-on-primary-fixed hover:bg-primary font-display font-bold text-sm py-3.5 rounded-full transition-all shadow-[0_0_24px_-4px_rgba(184,161,255,0.6)] active:scale-95 flex items-center justify-center gap-2 mt-2">
+        <span class="material-symbols-outlined text-[18px]">login</span>
+        <span>Sign In</span>
+      </button>
+    </form>
+
+    <div class="pt-4 text-center border-t border-outline-variant/30 text-xs text-on-surface-variant">
+      <span>Don't have an account yet?</span>
+      <a href="{% url 'register' %}" class="text-primary hover:underline font-semibold ml-1">Sign Up</a>
+    </div>
+
   </div>
-
-  <form method="post" action="{% url 'login' %}">
-    {% csrf_token %}
-
-    <div class="form-group">
-      <label class="form-label" for="id_username">Username</label>
-      {{ form.username }}
-      {% if form.username.errors %}
-        <div class="form-error">{{ form.username.errors }}</div>
-      {% endif %}
-    </div>
-
-    <div class="form-group">
-      <label class="form-label" for="id_password">Password</label>
-      {{ form.password }}
-      {% if form.password.errors %}
-        <div class="form-error">{{ form.password.errors }}</div>
-      {% endif %}
-    </div>
-
-    <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 1rem;">
-      Log In
-    </button>
-  </form>
-
-  <p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; margin-top: 1.75rem;">
-    Don't have an account yet?
-    <a href="{% url 'register' %}" style="color: var(--accent-gold); font-weight: 600; text-decoration: none;">Sign Up</a>
-  </p>
 </div>
 {% endblock %}

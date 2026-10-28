@@ -23,19 +23,54 @@ TICKET_TRIGGER_PATTERNS = [
     r"\b(?:report\s+(?:a\s+)?(?:bug|issue|problem))\b",
 ]
 
+# Conversational & social intents (must NOT trigger unsolicited movie recommendations)
+GREETING_PATTERNS = [
+    r"^(?:hi|hello|hey|heyy+|howdy|hola|yo|sup|hiya|greetings)(?:[\s,!?.].*|$)",
+    r"\bgood\s+(?:morning|afternoon|evening|day)\b",
+    r"\bwhat'?s\s+up\b",
+]
+
+FAREWELL_PATTERNS = [
+    r"^(?:bye|goodbye|see\s+ya|see\s+you|cya|take\s+care|farewell)(?:[\s,!?.].*|$)",
+    r"\bgood\s*night\b",
+]
+
+GRATITUDE_PATTERNS = [
+    r"\b(?:thanks|thank\s+you|thx|cheers|much\s+appreciated|appreciate\s+it)\b",
+]
+
+CONVERSATION_PATTERNS = [
+    r"\b(?:who\s+are\s+you|what\s+are\s+you|what\s+can\s+you\s+do|how\s+do\s+you\s+work|what\s+is\s+flickpick|tell\s+me\s+about\s+yourself|help\s+me|how\s+are\s+you)\b",
+]
+
+# Explicit Movie recommendation cues
 MOVIE_TRIGGER_PATTERNS = [
-    r"\b(?:recommend|suggest|movie|movies|film|films|cinema|thriller|comedy|drama|action|horror|actor|director|watch|tamil|hindi|telugu|malayalam|kannada|english)\b",
-    r"\b(?:under \d+|shorter|longer|more like|similar to)\b",
+    r"\b(?:recommend|recommendation|recommendations|suggest|suggestion|suggestions)\b",
+    r"\b(?:movie|movies|film|films|cinema|motion\s+picture|flick|flicks)\b",
+    r"\b(?:thriller|comedy|drama|action|horror|romance|sci-?fi|animation|documentary|adventure|fantasy|crime|mystery)\b",
+    r"\b(?:watch|stream|view|see)\s+(?:a|an|some)?\s*(?:movie|film|show|cinema)?\b",
+    r"\b(?:actor|director|starring|directed\s+by)\b",
+    r"\b(?:tamil|hindi|telugu|malayalam|kannada|english|bengali|marathi|korean|japanese)\b",
+    r"\bunder\s+\d+\s*(?:mins?|minutes?|hours?|hrs?)\b",
+]
+
+FOLLOWUP_PATTERNS = [
+    r"\b(?:shorter|longer|older|newer|more like|similar to|another|different|something else|instead)\b",
+    r"\b(?:what about|how about)\b",
 ]
 
 
-def classify_intent(message: str) -> str:
+def classify_intent(message: str, has_prior_recommendations: bool = False) -> str:
     """
     Classifies user message intent into one of:
     - 'error_code': Error code lookup / explanation
     - 'support_ticket': Support ticket creation or inquiry
+    - 'farewell': Conversational farewell
+    - 'gratitude': Thank you / appreciation
+    - 'movie_recommendation': Explicit movie discovery and recommendation
+    - 'greeting': Conversational greeting
+    - 'general_conversation': Assistant capability inquiry or general smalltalk
     - 'faq': Help / platform FAQ inquiry
-    - 'movie_recommendation': Movie discovery and recommendation
     """
     text = message.strip().lower()
 
@@ -49,19 +84,118 @@ def classify_intent(message: str) -> str:
         if re.search(pat, text):
             return "support_ticket"
 
-    # 3. Explicit Movie recommendation cues take precedence over generic questions
-    for pat in MOVIE_TRIGGER_PATTERNS:
+    # 3. Farewells & Gratitude take precedence (e.g. "bye, see you later", "thanks!")
+    for pat in FAREWELL_PATTERNS:
         if re.search(pat, text):
-            # If it's clearly asking for movies to watch
-            return "movie_recommendation"
+            return "farewell"
 
-    # 4. FAQ check
+    for pat in GRATITUDE_PATTERNS:
+        if re.search(pat, text):
+            return "gratitude"
+
+    # 4. Check for explicit movie recommendation intent
+    has_explicit_movie_request = bool(re.search(r"\b(?:recommend|recommendation|recommendations|suggest|suggestion|suggestions|movie|movies|film|films|cinema|flick|flicks)\b", text))
+    has_genre_or_trait = bool(re.search(r"\b(?:thriller|comedy|drama|action|horror|romance|sci-?fi|animation|documentary|adventure|fantasy|crime|mystery)\b", text))
+    has_watch_phrase = bool(re.search(r"\b(?:watch|stream|view|see)\s+(?:a\s+|an\s+|the\s+|some\s+)?(?:movie|movies|film|films|cinema|flick|flicks)\b", text))
+    has_actor_or_director = bool(re.search(r"\b(?:actor|director|starring|directed\s+by)\b", text))
+    has_language_cue = bool(re.search(r"\b(?:tamil|hindi|telugu|malayalam|kannada|english|bengali|marathi|korean|japanese)\s+(?:cinema|movie|film|thriller|comedy)?\b", text)) and has_explicit_movie_request
+    has_runtime_cue = bool(re.search(r"\bunder\s+\d+\s*(?:mins?|minutes?|hours?|hrs?)\b", text))
+    has_followup_cues = has_prior_recommendations and any(re.search(pat, text) for pat in FOLLOWUP_PATTERNS)
+
+    if has_explicit_movie_request or has_genre_or_trait or has_watch_phrase or has_actor_or_director or has_runtime_cue or has_followup_cues:
+        return "movie_recommendation"
+
+    # 5. Pure Greetings (only reached if no movie recommendation cues)
+    for pat in GREETING_PATTERNS:
+        if re.search(pat, text):
+            return "greeting"
+
+    # 6. General assistant / capability inquiries
+    for pat in CONVERSATION_PATTERNS:
+        if re.search(pat, text):
+            return "general_conversation"
+
+    # 7. FAQ check
     for pat in FAQ_TRIGGER_PATTERNS:
         if re.search(pat, text):
             return "faq"
 
-    # Default to movie recommendation
-    return "movie_recommendation"
+    # Default to general conversation
+    return "general_conversation"
+
+
+def handle_greeting_intent(user_message: str, user: Optional[User] = None) -> AIResponse:
+    """
+    Provides a warm, friendly greeting welcoming the user to FlickPick
+    without triggering movie search or recommending unsolicited movies.
+    """
+    user_name = f", {user.first_name}" if user and user.first_name else ""
+    reply = (
+        f"Hello{user_name}! 🎬 Welcome to **FlickPick**.\n\n"
+        "I'm **FlickBot**, your AI cinema concierge. I can help you:\n"
+        "• 🍿 **Find personalized movies** tailored by mood, genre, language, runtime, or cast\n"
+        "• 👥 **Decide with friends** by shortlisting candidate films for group room voting\n"
+        "• 🔍 **Explore our verified catalogue** of over 10,000+ curated titles\n\n"
+        "What kind of movie or mood are you looking for today?"
+    )
+    return AIResponse(
+        reply_text=reply,
+        intent="greeting",
+        recommendations=[]
+    )
+
+
+def handle_farewell_intent(user_message: str) -> AIResponse:
+    """
+    Provides a polite sign-off response.
+    """
+    reply = (
+        "Goodbye! Enjoy your movie night, and come back whenever you need help picking what to watch next. "
+        "Happy streaming! 🍿✨"
+    )
+    return AIResponse(
+        reply_text=reply,
+        intent="farewell",
+        recommendations=[]
+    )
+
+
+def handle_gratitude_intent(user_message: str) -> AIResponse:
+    """
+    Acknowledges user thanks and offers further assistance.
+    """
+    reply = (
+        "You're very welcome! Let me know if you want to explore more titles, refine your preferences, "
+        "or set up a group room for voting. Have a wonderful movie session! 🎬🍿"
+    )
+    return AIResponse(
+        reply_text=reply,
+        intent="gratitude",
+        recommendations=[]
+    )
+
+
+def handle_general_conversation_intent(user_message: str) -> AIResponse:
+    """
+    Provides helpful guidance on how to use FlickPick and FlickBot.
+    Never returns unprompted movie recommendations.
+    """
+    reply = (
+        "I'm **FlickBot**, FlickPick's AI movie companion! 🍿\n\n"
+        "I use a hybrid decision engine combining fast vector search over 10,000+ verified titles "
+        "with Gemini 3.5 Flash for natural language reasoning.\n\n"
+        "Here are a few things you can ask me:\n"
+        "• *'Suggest a gripping psychological thriller in Tamil under 2 hours'*\n"
+        "• *'Feel-good 90s animated movie for a family night'*\n"
+        "• *'Something like Interstellar with mind-bending concepts'*\n"
+        "• *'How does room voting work?'*\n\n"
+        "What are you looking to watch tonight?"
+    )
+    return AIResponse(
+        reply_text=reply,
+        intent="general_conversation",
+        recommendations=[]
+    )
 
 
 def handle_error_code_intent(user_message: str) -> AIResponse:
@@ -106,9 +240,6 @@ def handle_support_ticket_intent(user_message: str, user: Optional[User] = None)
     """
     text = user_message.strip()
 
-    # Check if user provided an issue description
-    # e.g., "Open a support ticket: Cannot submit my vote"
-    # or "Report bug: Room code AIRM01 is not found"
     colon_split = re.split(r'[:\-–—]\s*', text, maxsplit=1)
     if len(colon_split) > 1 and len(colon_split[1].strip()) > 5:
         subject = colon_split[1].strip()[:80]
@@ -132,7 +263,6 @@ def handle_support_ticket_intent(user_message: str, user: Optional[User] = None)
             }
         )
 
-    # General support inquiry without specific details
     reply = (
         "I can create a support ticket directly for you in our SQL database.\n\n"
         "To open a ticket, please reply with your issue details like this:\n"

@@ -13,7 +13,11 @@ from .router import (
     classify_intent,
     handle_error_code_intent,
     handle_support_ticket_intent,
-    handle_faq_intent
+    handle_faq_intent,
+    handle_greeting_intent,
+    handle_farewell_intent,
+    handle_gratitude_intent,
+    handle_general_conversation_intent,
 )
 from movies.mongo import log_chat_turn
 
@@ -51,7 +55,8 @@ def get_ai_recommendations(
             history.append({"role": t.role, "content": t.content})
 
     # Step 1: Classify user intent
-    intent = classify_intent(user_message)
+    has_prior_recs = bool(recent_recs)
+    intent = classify_intent(user_message, has_prior_recommendations=has_prior_recs)
     ai_response = None
 
     if intent == "error_code":
@@ -61,7 +66,16 @@ def get_ai_recommendations(
     elif intent == "faq":
         ai_response = handle_faq_intent(user_message)
         if not ai_response:
-            intent = "movie_recommendation"
+            intent = "general_conversation"
+            ai_response = handle_general_conversation_intent(user_message)
+    elif intent == "greeting":
+        ai_response = handle_greeting_intent(user_message, user=user)
+    elif intent == "farewell":
+        ai_response = handle_farewell_intent(user_message)
+    elif intent == "gratitude":
+        ai_response = handle_gratitude_intent(user_message)
+    elif intent == "general_conversation":
+        ai_response = handle_general_conversation_intent(user_message)
 
     if not ai_response:
         # Execute movie recommendation RAG pipeline

@@ -37,7 +37,7 @@ class RequestLoggingMiddleware:
         for k in list(query_dict.keys()):
             if any(s in k.lower() for s in SENSITIVE_PARAMS):
                 query_dict[k] = '[REDACTED]'
-        query_str = f"?{query_dict.urlencode()}" if query_dict else ""
+        query_str = f"?{query_dict.urlencode(safe='[]')}" if query_dict else ""
 
         logger.info(
             f"[{method}] {path}{query_str} -> {status_code} ({duration_ms:.1f}ms) User: {user_ident}"

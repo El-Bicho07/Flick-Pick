@@ -35,7 +35,7 @@
         {% for w in winners %}
           <div class="bg-surface-container-lowest/80 border border-outline-variant/60 rounded-2xl p-4 text-center space-y-3">
             <div class="aspect-[2/3] w-28 mx-auto rounded-xl overflow-hidden shadow-lg border border-outline-variant/40">
-              <img src="{{ w.movie.get_poster }}" alt="{{ w.movie.title }}" class="w-full h-full object-cover">
+              <img src="{{ w.movie.get_poster }}" alt="{{ w.movie.title }}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='/static/images/default-poster.svg';">
             </div>
             <div>
               <h3 class="font-display font-bold text-sm text-on-surface">{{ w.movie.title }}</h3>
@@ -63,7 +63,7 @@
 
         <!-- Movie Poster Showcase -->
         <div class="w-48 sm:w-56 aspect-[2/3] mx-auto rounded-2xl overflow-hidden shadow-2xl border border-outline-variant/60 relative group">
-          <img src="{{ winner.movie.get_poster }}" alt="{{ winner.movie.title }}" class="w-full h-full object-cover">
+          <img src="{{ winner.movie.get_poster }}" alt="{{ winner.movie.title }}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='/static/images/default-poster.svg';">
           {% if winner.movie.vote_average > 0 %}
             <div class="absolute top-2.5 right-2.5 bg-surface-container-lowest/90 backdrop-blur-md border border-amber-400/40 px-2.5 py-1 rounded-full text-xs font-bold text-amber-300">
               ★ {{ winner.movie.vote_average|floatformat:1 }}
@@ -124,7 +124,7 @@
           <div class="flex items-center gap-3 min-w-0">
             <span class="font-mono font-bold text-xs text-outline w-5 text-center">{{ forloop.counter }}</span>
             <div class="w-10 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container">
-              <img src="{{ c.movie.get_poster }}" alt="{{ c.movie.title }}" class="w-full h-full object-cover">
+              <img src="{{ c.movie.get_poster }}" alt="{{ c.movie.title }}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='/static/images/default-poster.svg';">
             </div>
             <div class="min-w-0">
               <h4 class="font-display font-bold text-xs text-on-surface truncate">{{ c.movie.title }}</h4>

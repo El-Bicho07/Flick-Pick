@@ -843,6 +843,55 @@ class UnifiedAssistantRoutingTests(TestCase):
         self.assertIsNotNone(ticket)
         self.assertEqual(ticket.user, user)
 
+    def test_greeting_does_not_offer_ticket(self):
+        """Regression test 1: A greeting receives conversational response without ticket offers."""
+        resp = get_ai_recommendations("Hello FlickBot")
+        self.assertEqual(resp.intent, "greeting")
+        self.assertIsNone(resp.support_ticket)
+        self.assertNotIn("Open support ticket", resp.reply_text)
+        self.assertEqual(len(resp.recommendations), 0)
+
+    def test_question_answered_by_existing_faq(self):
+        """Regression test 2: A question answered by an existing FAQ returns authoritative answer."""
+        resp = get_ai_recommendations("How does the voting process work?")
+        self.assertEqual(resp.intent, "faq")
+        self.assertTrue(len(resp.faq_items) > 0)
+        self.assertIn("voting", resp.reply_text.lower())
+        self.assertIsNone(resp.support_ticket)
+
+    def test_unanswered_support_question_offers_ticket(self):
+        """Regression test 3: An unanswered support question offers a ticket without auto-creating one."""
+        initial_ticket_count = SupportTicket.objects.count()
+        resp = get_ai_recommendations("How do I cancel my subscription and get a refund?")
+        self.assertEqual(resp.intent, "faq")
+        self.assertIsNone(resp.support_ticket)
+        self.assertIn("could not find a reliable answer", resp.reply_text)
+        self.assertIn("Open support ticket: [describe your issue or inquiry]", resp.reply_text)
+        # Verify no database ticket was created automatically without user consent
+        self.assertEqual(SupportTicket.objects.count(), initial_ticket_count)
+
+    def test_explicit_ticket_request_creates_database_record(self):
+        """Regression test 4: An explicit ticket request creates a database record."""
+        user = User.objects.create_user('explicit_user', password='Password123!')
+        initial_count = SupportTicket.objects.count()
+        resp = get_ai_recommendations(
+            "Open support ticket: Voting screen frozen on candidate 3",
+            user=user
+        )
+        self.assertEqual(resp.intent, "support_ticket")
+        self.assertIsNotNone(resp.support_ticket)
+        self.assertEqual(SupportTicket.objects.count(), initial_count + 1)
+        created_ticket = SupportTicket.objects.filter(ticket_id=resp.support_ticket['ticket_id']).first()
+        self.assertIsNotNone(created_ticket)
+        self.assertIn("Voting screen frozen", created_ticket.subject)
+
+    def test_movie_recommendation_does_not_trigger_ticket(self):
+        """Regression test 5: A movie recommendation request does not trigger ticket creation or ticket offer."""
+        resp = get_ai_recommendations("Recommend three Tamil thrillers under 2 hours")
+        self.assertEqual(resp.intent, "movie_recommendation")
+        self.assertIsNone(resp.support_ticket)
+        self.assertNotIn("support ticket", resp.reply_text.lower())
+
 
 # ==============================================================================
 # Support Ticket Model & API Tests
@@ -952,8 +1001,15 @@ class MiddlewareAndHealthCheckTests(TestCase):
         self.client = Client()
 
     def test_request_logging_middleware_execution(self):
-        res = self.client.get(reverse('home'), {'q': 'test', 'password': 'sensitive_secret'})
-        self.assertEqual(res.status_code, 200)
+        with self.assertLogs('flickpick.requests', level='INFO') as cm:
+            res = self.client.get(reverse('home'), {'q': 'test', 'password': 'sensitive_secret_value', 'api_key': 'secret_key_123'})
+            self.assertEqual(res.status_code, 200)
+            log_output = " ".join(cm.output)
+            self.assertIn("[GET] /?", log_output)
+            self.assertIn("[REDACTED]", log_output)
+            self.assertNotIn("sensitive_secret_value", log_output)
+            self.assertNotIn("secret_key_123", log_output)
+            self.assertIn("ms)", log_output)
 
     def test_health_check_endpoint(self):
         res = self.client.get(reverse('health_check'))
@@ -1201,3 +1257,217 @@ class AIIntentAndPlaceholderTests(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, "Interstellar")
         self.assertNotContains(res, "Movie 323")
+
+
+class MovieMetadataVerificationTests(TestCase):
+    """
+    Tests for PART C.7: Verifying movie identity, descriptions, posters,
+    and management commands against authoritative sources.
+    """
+    def setUp(self):
+        from io import StringIO
+        self.out = StringIO()
+        self.user = User.objects.create_user(username='audituser', password='password123')
+        self.room = Room.objects.create(name='Audit Room', code='AUDIT1', host=self.user)
+
+        # Realistic test movie with generic overview and incorrect year
+        self.ddlj = Movie.objects.create(
+            title="Dilwale Dulhania Le Jayenge",
+            original_title="Dilwale Dulhania Le Jayenge",
+            language="Hindi",
+            release_year=2021,  # Corrupted year in raw dataset
+            director="Aditya Chopra",
+            overview="Hindi Romance film directed by Aditya Chopra. Starring Shah Rukh Khan.",
+            poster_url="",
+            source="indian_movies",
+            source_id="51",
+        )
+
+        # CBFC movie with studio applicant in director and boilerplate overview
+        self.kalki = Movie.objects.create(
+            title="Kalki 2898 AD",
+            original_title="Kalki 2898 AD",
+            language="Telugu",
+            release_year=2024,
+            director="Vyjayanthi Movies",
+            overview="CBFC Certified Indian Film. Category: UA",
+            poster_url="",
+            source="cbfc",
+            source_id="cbfc-101",
+        )
+
+        # Synthetic placeholder movie
+        self.placeholder = Movie.objects.create(
+            title="Movie 323",
+            language="Hindi",
+            release_year=2025,
+            overview="Hindi Romance film directed by Unknown.",
+            source="indian_movies",
+            source_id="323",
+        )
+
+    def test_movie_identification_similar_titles(self):
+        """Distinguishes similar titles such as Avatar vs Avatar: The Way of Water."""
+        from movies.verification import normalize_title
+        t1 = normalize_title("Avatar")
+        t2 = normalize_title("Avatar: The Way of Water")
+        self.assertNotEqual(t1, t2)
+        self.assertEqual(t1, "avatar")
+        self.assertEqual(t2, "avatar the way of water")
+
+    def test_remakes_and_same_title_disambiguation(self):
+        """Disambiguates films sharing identical titles using release year and language."""
+        from movies.verification import normalize_title, CANONICAL_VERIFIED_REGISTRY
+        # In registry, Drishyam is 2013 Malayalam
+        drishyam_canonical = CANONICAL_VERIFIED_REGISTRY["drishyam"]
+        self.assertEqual(drishyam_canonical["release_year"], 2013)
+        self.assertEqual(drishyam_canonical["language"], "Malayalam")
+        self.assertEqual(drishyam_canonical["director"], "Jeethu Joseph")
+
+        # Create Hindi 2015 remake
+        hindi_remake = Movie.objects.create(
+            title="Drishyam",
+            language="Hindi",
+            release_year=2015,
+            director="Nishikant Kamat",
+            source="manual",
+        )
+        self.assertEqual(hindi_remake.release_year, 2015)
+        self.assertEqual(hindi_remake.language, "Hindi")
+        self.assertNotEqual(hindi_remake.language, drishyam_canonical["language"])
+
+    def test_matching_release_year_and_language(self):
+        """Verifies that matching correctly detects release year discrepancy and updates it."""
+        from movies.verification import verify_movie_record, VerificationConfidence
+        res = verify_movie_record(self.ddlj, check_reachability=False)
+        self.assertEqual(res.confidence, VerificationConfidence.HIGH)
+        self.assertIn("release_year", res.proposed_changes)
+        self.assertEqual(res.proposed_changes["release_year"]["current"], 2021)
+        self.assertEqual(res.proposed_changes["release_year"]["proposed"], 1995)
+
+    def test_broken_image_url_detection(self):
+        """Verifies that an unreachable/broken image URL is detected and reverted to fallback."""
+        from movies.verification import verify_movie_record
+        from movies import tmdb
+        test_movie = Movie.objects.create(
+            title="Broken Poster Film",
+            release_year=2010,
+            poster_url="https://example.com/broken_poster_404.jpg",
+            source="manual",
+        )
+        with patch.object(tmdb, 'verify_image_reachability', return_value=False):
+            res = verify_movie_record(test_movie, check_reachability=True)
+            self.assertIn("poster_url", res.proposed_changes)
+            self.assertEqual(res.proposed_changes["poster_url"]["proposed"], "/static/images/default-poster.svg")
+
+    def test_mismatched_poster_detection(self):
+        """Proposes verified poster URL from authoritative ground truth."""
+        from movies.verification import verify_movie_record
+        res = verify_movie_record(self.ddlj, check_reachability=False)
+        self.assertIn("poster_url", res.proposed_changes)
+        self.assertTrue(res.proposed_changes["poster_url"]["proposed"].startswith("https://image.tmdb.org/t/p/w500/"))
+
+    def test_generic_and_incorrect_description_replacement(self):
+        """Generic template overviews are flagged and replaced with factual synopses."""
+        from movies.verification import is_generic_description, verify_movie_record
+        self.assertTrue(is_generic_description(self.ddlj.overview))
+        self.assertTrue(is_generic_description(self.kalki.overview))
+        self.assertTrue(is_generic_description(""))
+
+        res_kalki = verify_movie_record(self.kalki, check_reachability=False)
+        self.assertIn("overview", res_kalki.proposed_changes)
+        self.assertIn("Complex", res_kalki.proposed_changes["overview"]["proposed"])
+        self.assertIn("director", res_kalki.proposed_changes)
+        self.assertEqual(res_kalki.proposed_changes["director"]["proposed"], "Nag Ashwin")
+
+    def test_external_api_timeout_and_graceful_handling(self):
+        """Handles external API timeouts gracefully without crashing."""
+        import requests
+        with patch('requests.get', side_effect=requests.exceptions.Timeout("TMDB timeout")):
+            details = tmdb.get_movie_details("256040")
+            self.assertIsNone(details)
+            search_res = tmdb.search_movies("Baahubali")
+            self.assertEqual(search_res, [])
+
+    def test_missing_or_invalid_tmdb_key(self):
+        """Operates cleanly when TMDB_API_KEY is unset or empty."""
+        with override_settings(TMDB_API_KEY=""):
+            self.assertFalse(tmdb.is_tmdb_available())
+            self.assertIsNone(tmdb.get_movie_details("256040"))
+            self.assertEqual(tmdb.search_movies("Inception"), [])
+
+    def test_low_confidence_matches_not_applied(self):
+        """Synthetic placeholders or low confidence candidates are not applied."""
+        from movies.verification import verify_movie_record, VerificationConfidence
+        res = verify_movie_record(self.placeholder, check_reachability=False)
+        self.assertEqual(res.confidence, VerificationConfidence.LOW)
+        self.assertTrue(res.is_placeholder)
+        self.assertEqual(res.proposed_changes, {})
+
+    def test_dry_run_mode_makes_no_database_changes(self):
+        """Dry-run command reports proposed changes without writing to database."""
+        from io import StringIO
+        out = StringIO()
+        orig_year = self.ddlj.release_year
+        call_command('verify_movie_metadata', '--dry-run', '--source', 'indian_movies', '--limit', '1', stdout=out)
+        self.ddlj.refresh_from_db()
+        self.assertEqual(self.ddlj.release_year, orig_year)
+        self.assertIn("DRY RUN", out.getvalue())
+
+    def test_verified_corrections_preserve_ids_and_relationships(self):
+        """Applying corrections updates fields while preserving movie ID and room candidate relations."""
+        from io import StringIO
+        from movies.verification import apply_verification_result, verify_movie_record
+        out = StringIO()
+        cand = MovieCandidate.objects.create(room=self.room, movie=self.ddlj, added_by=self.user)
+        orig_id = self.ddlj.pk
+
+        result = verify_movie_record(self.ddlj, check_reachability=False)
+        apply_verification_result(self.ddlj, result)
+
+        self.ddlj.refresh_from_db()
+        self.assertEqual(self.ddlj.pk, orig_id)
+        self.assertEqual(self.ddlj.release_year, 1995)
+        self.assertEqual(self.ddlj.verification_status, "corrected")
+        self.assertEqual(cand.movie.pk, orig_id)
+
+    def test_ai_assistant_returns_canonical_titles_and_validated_posters(self):
+        """AI assistant response returns canonical movie title, validated poster, and separate explanation."""
+        client = Client()
+        res = client.post(
+            reverse('ai_chat_api'),
+            data=json.dumps({'message': 'recommend an Indian epic film'}),
+            content_type='application/json'
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data.get('success'))
+        for r in data.get('recommendations', []):
+            self.assertFalse(Movie.is_placeholder_title(r['title']))
+            self.assertTrue(r['poster_url'].startswith(('http://', 'https://', '/static/')))
+            self.assertIn('explanation', r)
+
+    def test_missing_metadata_displays_fallback_not_fabricated(self):
+        """Movies with empty poster return default-poster.svg, never fabricated URLs."""
+        blank_movie = Movie.objects.create(
+            title="Unreleased Project",
+            release_year=2026,
+            poster_url="",
+            source="manual"
+        )
+        self.assertEqual(blank_movie.get_poster(), "/static/images/default-poster.svg")
+
+    def test_reachability_caching_bounds_api_calls(self):
+        """Verifying the same image URL twice uses cache and avoids redundant HTTP requests."""
+        from movies import tmdb
+        test_url = "https://image.tmdb.org/t/p/w500/test_cached_poster.jpg"
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.headers = {"Content-Type": "image/jpeg"}
+
+        with patch('requests.head', return_value=mock_resp) as mock_head:
+            first_check = tmdb.verify_image_reachability(test_url)
+            second_check = tmdb.verify_image_reachability(test_url)
+            self.assertTrue(first_check)
+            self.assertTrue(second_check)
+            self.assertEqual(mock_head.call_count, 1)

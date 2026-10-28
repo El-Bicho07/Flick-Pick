@@ -137,7 +137,7 @@
           {% for c in candidates %}
             <article class="bg-surface-container border border-outline-variant/60 rounded-2xl p-4 flex gap-4 items-start relative hover:border-primary/40 transition-all">
               <div class="w-20 aspect-[2/3] rounded-xl overflow-hidden flex-shrink-0 bg-surface-container-lowest border border-outline-variant/50">
-                <img src="{{ c.movie.get_poster }}" alt="{{ c.movie.title }}" class="w-full h-full object-cover" loading="lazy">
+                <img src="{{ c.movie.get_poster }}" alt="{{ c.movie.title }}" class="w-full h-full object-cover" loading="lazy" onerror="this.onerror=null;this.src='/static/images/default-poster.svg';">
               </div>
 
               <div class="flex-1 min-w-0">

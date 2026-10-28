@@ -30,4 +30,6 @@ RUN python manage.py collectstatic --noinput
 EXPOSE 8000
 
 # Start Gunicorn binding to $PORT (assigned dynamically by Render, Railway, Cloud Run)
-CMD ["sh", "-c", "exec gunicorn flickpick.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 120 --access-logfile - --error-logfile -"]
+# Defaults to 1 worker for Render Free Tier (512MB RAM) to prevent ONNX/FastEmbed memory exhaustion;
+# can be overridden by setting WEB_CONCURRENCY environment variable.
+CMD ["sh", "-c", "exec gunicorn flickpick.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers ${WEB_CONCURRENCY:-1} --timeout 120 --access-logfile - --error-logfile -"]

@@ -100,7 +100,7 @@
           {% for movie in page_obj %}
             <article class="movie-card">
               <div class="movie-poster-wrap">
-                <img src="{{ movie.get_poster }}" alt="{{ movie.title }}" class="movie-poster-img" loading="lazy">
+                <img src="{{ movie.get_poster }}" alt="{{ movie.title }}" class="movie-poster-img" loading="lazy" onerror="this.onerror=null;this.src='/static/images/default-poster.svg';">
                 {% if movie.vote_average > 0 %}
                   <span class="movie-rating-badge">★ {{ movie.vote_average|floatformat:1 }}</span>
                 {% endif %}
@@ -363,7 +363,7 @@
 
         recsHtml += `
           <div class="bg-surface-container-lowest/90 p-2.5 rounded-xl border border-outline-variant/50 flex gap-2.5 items-start">
-            <img src="${r.poster_url || '/static/images/default-poster.svg'}" class="w-12 h-16 rounded-lg object-cover flex-shrink-0 bg-surface-container" alt="${escapeHtml(r.title)}">
+            <img src="${r.poster_url || '/static/images/default-poster.svg'}" onerror="this.onerror=null;this.src='/static/images/default-poster.svg';" class="w-12 h-16 rounded-lg object-cover flex-shrink-0 bg-surface-container" alt="${escapeHtml(r.title)}">
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between gap-1">
                 <a href="/movies/${r.movie_id}/" class="font-display font-bold text-xs text-on-surface hover:text-primary truncate">${escapeHtml(r.title)}</a>

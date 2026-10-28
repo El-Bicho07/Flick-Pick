@@ -41,7 +41,7 @@
 
           <!-- Movie Poster (2:3 Aspect) -->
           <div class="w-28 sm:w-36 aspect-[2/3] rounded-2xl overflow-hidden flex-shrink-0 bg-surface-container-lowest border border-outline-variant/50 relative shadow-lg">
-            <img src="{{ c.movie.get_poster }}" alt="{{ c.movie.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
+            <img src="{{ c.movie.get_poster }}" alt="{{ c.movie.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" onerror="this.onerror=null;this.src='/static/images/default-poster.svg';">
             {% if c.movie.vote_average > 0 %}
               <div class="absolute top-2 left-2 bg-surface-container-lowest/90 backdrop-blur-md border border-amber-400/40 px-2 py-0.5 rounded-full text-[10px] font-bold text-amber-300">
                 ★ {{ c.movie.vote_average|floatformat:1 }}

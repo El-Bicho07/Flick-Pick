@@ -14,6 +14,7 @@ from .router import (
     handle_error_code_intent,
     handle_support_ticket_intent,
     handle_faq_intent,
+    handle_unanswered_faq_intent,
     handle_greeting_intent,
     handle_farewell_intent,
     handle_gratitude_intent,
@@ -66,8 +67,7 @@ def get_ai_recommendations(
     elif intent == "faq":
         ai_response = handle_faq_intent(user_message)
         if not ai_response:
-            intent = "general_conversation"
-            ai_response = handle_general_conversation_intent(user_message)
+            ai_response = handle_unanswered_faq_intent(user_message)
     elif intent == "greeting":
         ai_response = handle_greeting_intent(user_message, user=user)
     elif intent == "farewell":

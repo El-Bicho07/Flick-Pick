@@ -233,7 +233,7 @@
                 {% for m in msg.recommended_movies.all %}
                   <div class="rec-card">
                     <div class="rec-card-poster">
-                      <img src="{{ m.get_poster }}" alt="{{ m.title }}" loading="lazy">
+                      <img src="{{ m.get_poster }}" alt="{{ m.title }}" loading="lazy" onerror="this.onerror=null;this.src='/static/images/default-poster.svg';">
                     </div>
                     <div style="padding: 0.85rem; display: flex; flex-direction: column; flex: 1;">
                       <a href="{% url 'movie_detail' pk=m.pk %}" style="font-weight: 700; color: var(--text-primary); text-decoration: none; font-size: 0.95rem; margin-bottom: 0.25rem;">

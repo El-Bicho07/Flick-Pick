@@ -1,5 +1,9 @@
 # FlickPick — Django Group Movie Picker
 
+> **Live Production Deployment:** [https://flick-pick-p46m.onrender.com](https://flick-pick-p46m.onrender.com)<br>
+> **Health Check Endpoint:** [https://flick-pick-p46m.onrender.com/health/](https://flick-pick-p46m.onrender.com/health/)<br>
+> **Production Architecture:** Render (Docker) + Neon PostgreSQL + MongoDB Atlas + Gemini 3.5 Flash AI + FastEmbed ONNX
+
 **FlickPick** is a full-featured collaborative Django web application designed to help groups of friends decide which movie to watch together democratically. Users can create movie-night rooms, share unique room codes, specify filtering preferences (genres, language, release year, runtime), shortlist candidate films from a 10,000+ local catalogue, vote simultaneously on their own devices, and view the winning movie with full tie-breaking support.
 
 ---

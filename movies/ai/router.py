@@ -13,7 +13,7 @@ ERROR_PATTERNS = [
 ]
 
 FAQ_TRIGGER_PATTERNS = [
-    r"\b(?:how (?:do|can|does|to)|what is|where (?:do|does|can)|can i|who|why does)\b",
+    r"\b(?:how (?:do|can|does|to|is)|what (?:is|do|are|can)|where (?:do|does|can|is)|can i|who|why (?:does|is|are|do)|is there|refund|subscription|troubleshoot)\b",
     r"\b(?:create room|join room|voting|vote|shortlist|tie|rules|catalogue|dataset|faq|cbfc|movielens)\b",
 ]
 
@@ -240,10 +240,18 @@ def handle_support_ticket_intent(user_message: str, user: Optional[User] = None)
     """
     text = user_message.strip()
 
+    details = ""
     colon_split = re.split(r'[:\-–—]\s*', text, maxsplit=1)
     if len(colon_split) > 1 and len(colon_split[1].strip()) > 5:
-        subject = colon_split[1].strip()[:80]
-        description = colon_split[1].strip()
+        details = colon_split[1].strip()
+    else:
+        keyword_match = re.search(r'\b(?:ticket)\s+(?:for|about|regarding|on)\s+(.+)$', text, re.IGNORECASE)
+        if keyword_match and len(keyword_match.group(1).strip()) > 5:
+            details = keyword_match.group(1).strip()
+
+    if details:
+        subject = details[:80]
+        description = details
         ticket = create_support_ticket(subject=subject, description=description, user=user)
         reply = (
             f"✅ **Support Ticket Created Successfully!**\n\n"
@@ -266,12 +274,35 @@ def handle_support_ticket_intent(user_message: str, user: Optional[User] = None)
     reply = (
         "I can create a support ticket directly for you in our SQL database.\n\n"
         "To open a ticket, please reply with your issue details like this:\n"
-        "👉 `Open a support ticket: [Describe your issue or error here]`\n\n"
+        "👉 `Open support ticket: [describe your issue or error here]`\n\n"
         "Our system will instantly generate a unique tracking reference code (`#FP-XXXXXXXX`)."
     )
     return AIResponse(
         reply_text=reply,
         intent="support_ticket"
+    )
+
+
+def handle_unanswered_faq_intent(user_message: str) -> AIResponse:
+    """
+    Handles help or platform inquiries when no matching published FAQs are found.
+    Clearly explains that the assistant could not find a reliable answer in its knowledge base,
+    and offers to create a support ticket with explicit instructions without auto-creating one.
+    """
+    clean_query = user_message.strip()
+    query_snippet = clean_query[:60] + ('...' if len(clean_query) > 60 else '')
+    reply = (
+        f"I searched FlickPick's knowledge base, but I could not find a reliable answer regarding:\n"
+        f"*{query_snippet}*\n\n"
+        "Would you like me to open a support ticket for our engineering team to investigate this issue?\n\n"
+        "To open a ticket, simply reply with your issue details:\n"
+        "👉 `Open support ticket: [describe your issue or inquiry]`\n\n"
+        "Our system will log your issue in our SQL database and generate an official reference code (`#FP-XXXXXXXX`)."
+    )
+    return AIResponse(
+        reply_text=reply,
+        intent="faq",
+        unsupported_notes=f"No matching FAQ found for query: {query_snippet}"
     )
 
 

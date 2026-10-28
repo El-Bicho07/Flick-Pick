@@ -12,6 +12,18 @@ class MovieQuerySet(models.QuerySet):
         """Excludes synthetic placeholder titles such as 'Movie 323' from imported datasets."""
         return self.exclude(title__regex=r'^Movie[\s_-]*[0-9]+$')
 
+    def verified(self):
+        """Filters records with verified or corrected status."""
+        return self.filter(verification_status__in=['verified', 'corrected'])
+
+    def unverified(self):
+        """Filters unverified records."""
+        return self.filter(verification_status='unverified')
+
+    def flagged(self):
+        """Filters records flagged for review due to discrepancies or low confidence."""
+        return self.filter(verification_status='flagged')
+
 
 class Movie(models.Model):
     """
@@ -24,6 +36,13 @@ class Movie(models.Model):
         ('cbfc', 'CBFC Records'),
         ('tmdb', 'The Movie Database (TMDB)'),
         ('manual', 'Manual Entry'),
+    ]
+
+    VERIFICATION_STATUS_CHOICES = [
+        ('unverified', 'Unverified'),
+        ('verified', 'Verified Canonical'),
+        ('corrected', 'Corrected from Reliable Source'),
+        ('flagged', 'Flagged for Review'),
     ]
 
     objects = MovieQuerySet.as_manager()
@@ -48,6 +67,34 @@ class Movie(models.Model):
     director = models.CharField(max_length=255, blank=True)
     cast = models.TextField(blank=True, help_text="Key actors/cast members")
 
+    # Authoritative verification tracking
+    verification_status = models.CharField(
+        max_length=50,
+        choices=VERIFICATION_STATUS_CHOICES,
+        default='unverified',
+        db_index=True,
+        help_text="Verification state against authoritative web/database sources"
+    )
+    verification_source = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Primary verified source (e.g. TMDB, Wikipedia, Wikidata)"
+    )
+    verification_source_url = models.URLField(
+        max_length=500,
+        blank=True,
+        help_text="Source URL of verified metadata"
+    )
+    verified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp when metadata was last verified or corrected"
+    )
+    verification_notes = models.TextField(
+        blank=True,
+        help_text="Audit notes on confidence, replaced fields, or discrepancies"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -71,9 +118,12 @@ class Movie(models.Model):
         return [g.strip() for g in raw.split(',') if g.strip()]
 
     def get_poster(self):
-        """Returns the poster URL or a fallback placeholder."""
-        if self.poster_url:
-            return self.poster_url
+        """Returns the verified poster URL or a fallback placeholder."""
+        if self.poster_url and self.poster_url.strip():
+            url = self.poster_url.strip()
+            # Defensive check: do not return dummy placeholder text, broken links, or empty strings
+            if url.startswith(('http://', 'https://', '/static/')) and not url.lower().endswith(('/default-poster.svg', '/placeholder.png')):
+                return url
         return "/static/images/default-poster.svg"
 
     @classmethod

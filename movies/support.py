@@ -25,7 +25,9 @@ def search_faqs(query: str, limit: int = 3) -> List[Dict[str, Any]]:
 
     STOP_WORDS = {
         'how', 'does', 'the', 'what', 'can', 'are', 'and', 'for', 'you', 'your',
-        'with', 'from', 'about', 'this', 'that', 'our', 'who', 'why', 'flickpick'
+        'with', 'from', 'about', 'this', 'that', 'our', 'who', 'why', 'flickpick',
+        'get', 'gets', 'got', 'have', 'has', 'had', 'would', 'could', 'should',
+        'will', 'shall', 'may', 'might', 'must', 'been', 'being', 'was', 'were'
     }
 
     raw_tokens = [re.sub(r'[^\w]', '', w.lower()) for w in q_str.split()]

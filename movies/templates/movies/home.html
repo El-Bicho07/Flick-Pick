@@ -239,7 +239,7 @@
     {% for movie in recent_movies %}
       <div class="movie-card">
         <div class="movie-poster-wrap">
-          <img src="{{ movie.get_poster }}" alt="{{ movie.title }}" class="movie-poster-img" loading="lazy">
+          <img src="{{ movie.get_poster }}" alt="{{ movie.title }}" class="movie-poster-img" loading="lazy" onerror="this.onerror=null;this.src='/static/images/default-poster.svg';">
           {% if movie.vote_average > 0 %}
             <span class="movie-rating-badge">★ {{ movie.vote_average|floatformat:1 }}</span>
           {% endif %}

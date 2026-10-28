@@ -31,9 +31,11 @@
       </button>
 
       <ul class="nav-links">
+        <li><a href="{% url 'ai_chat' %}" class="nav-link" style="color: var(--accent-gold); font-weight: 700;">✨ FlickPick AI</a></li>
         <li><a href="{% url 'movie_list' %}" class="nav-link">Browse Movies</a></li>
         <li><a href="{% url 'create_room' %}" class="nav-link">Create Room</a></li>
         <li><a href="{% url 'join_room' %}" class="nav-link">Join Room</a></li>
+        <li><a href="{% url 'faq' %}" class="nav-link">FAQs</a></li>
 
         {% if user.is_authenticated %}
           <li><a href="{% url 'profile' %}" class="nav-link user-badge">👤 {{ user.username }}</a></li>
@@ -83,9 +85,14 @@
         <li><a href="{% url 'home' %}">Home</a></li>
         <li><a href="{% url 'movie_list' %}">Catalogue</a></li>
         <li><a href="{% url 'create_room' %}">Start a Room</a></li>
+        <li><a href="{% url 'faq' %}">FAQs</a></li>
+        <li><a href="{% url 'health_check' %}">Health</a></li>
       </ul>
     </div>
   </footer>
+
+  <!-- Reusable FlickPick AI Assistant Widget -->
+  {% include 'movies/assistant_widget.html' %}
 
   <script src="{% static 'js/main.js' %}"></script>
   {% block extra_js %}{% endblock %}

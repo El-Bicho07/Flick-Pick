@@ -6,3 +6,6 @@ urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')),
     path('', include('movies.urls')),
 ]
+
+handler404 = 'movies.views.custom_404_view'
+handler500 = 'movies.views.custom_500_view'

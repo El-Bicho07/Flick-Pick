@@ -1,3 +1,12 @@
 Django>=5.1,<5.2
 python-dotenv>=1.0.0
 requests>=2.31.0
+numpy>=1.26.0
+scikit-learn>=1.4.0
+fastembed>=0.3.0
+google-genai>=2.30.0
+pymongo>=4.10.0
+psycopg[binary]>=3.2.0
+dj-database-url>=2.3.0
+whitenoise>=6.8.0
+gunicorn>=23.0.0

@@ -21,28 +21,46 @@ flickpick/
 │
 ├── movies/                            # Core application package
 │   ├── __init__.py
-│   ├── admin.py                       # Model registrations for Django Admin
+│   ├── admin.py                       # Model registrations (Movie, Room, AIConversation, FAQ, ErrorCode, SupportTicket)
 │   ├── apps.py                        # Application configuration
-│   ├── context_processors.py          # Global template context (app name, TMDB flag)
+│   ├── context_processors.py          # Global template context (app name, TMDB flag, AI flag)
 │   ├── forms.py                       # Registration, Login, Profile, Room, and Filter forms
-│   ├── models.py                      # Movie, Room, Participant, Candidate, Vote, Preference
-│   ├── views.py                       # Request handling, rooms, voting logic & winner tallies
-│   ├── urls.py                        # Application routes
+│   ├── models.py                      # Movie, Room, Participant, Candidate, Vote, Preference, AIConversation, AIMessage, FAQ, ErrorCode, SupportTicket
+│   ├── views.py                       # Request handling, rooms, voting, AI chat, shortlist, FAQ, feedback, ticket, health check, custom error handlers
+│   ├── urls.py                        # Application routes (catalogue, rooms, voting, AI chat & shortlist, FAQ, health, feedback, tickets)
+│   ├── support.py                     # SQL FAQ search, ErrorCode authoritative lookup, and SupportTicket creation service
+│   ├── mongo.py                       # MongoDB chat logging and user feedback service with graceful offline resilience
+│   ├── middleware.py                  # Request duration logging with sensitive parameter redaction
 │   ├── tmdb.py                        # Graceful TMDB live metadata helper (optional)
-│   ├── tests.py                       # Comprehensive test suite (21 unit & integration tests)
+│   ├── tests.py                       # Comprehensive test suite (63 unit, integration, RAG, Gemini, MongoDB, and error tests)
+│   ├── ai/                            # FlickPick AI RAG pipeline package
+│   │   ├── __init__.py                # Main coordinator (get_ai_recommendations)
+│   │   ├── router.py                  # Multi-intent router (movie_recommendation, faq, error_code, support_ticket)
+│   │   ├── schemas.py                 # Structured dataclasses (ExtractedPreferences, CandidateMovie, AIResponse)
+│   │   ├── preferences.py             # Natural-language preference parser and follow-up merger
+│   │   ├── retrieval.py               # VectorStore (fastembed BAAI/bge-small-en-v1.5) and hybrid retrieval
+│   │   ├── ranking.py                 # Deterministic multi-factor candidate scoring
+│   │   └── generation.py              # Grounded generation for Ollama (qwen3:4b) and Google Gemini (google-genai SDK)
 │   ├── migrations/                    # Schema migrations
 │   │   ├── 0001_initial.py
+│   │   ├── 0002_aiconversation_aimessage.py
+│   │   ├── 0003_errorcode_faq_supportticket.py
 │   │   └── __init__.py
 │   ├── management/
 │   │   └── commands/
 │   │       ├── __init__.py
-│   │       └── import_movie_datasets.py # Repeatable multi-source dataset importer
+│   │       ├── import_movie_datasets.py # Repeatable multi-source dataset importer
+│   │       ├── build_movie_embeddings.py # Generates semantic vector index (data/processed/movie_embeddings.npz)
+│   │       └── seed_faqs_and_errors.py   # Seeds 12 FAQs and 8 ErrorCodes into SQL database
 │   └── templates/
 │       └── movies/
-│           ├── base.html              # Base layout with cinematic dark theme & accessible nav
+│           ├── base.html              # Base layout with cinematic dark theme & accessible nav (includes assistant widget)
+│           ├── assistant_widget.html  # Universal floating/docked AI assistant widget included on every page
 │           ├── home.html              # Landing hero, how it works, featured catalogue
 │           ├── movie_list.html        # Catalogue search, filter, and pagination
 │           ├── movie_detail.html      # Movie metadata, synopsis, cast, nominate to room
+│           ├── ai_chat.html           # FlickPick AI full-screen chat interface, sample prompts & recommendation cards
+│           ├── faq.html               # Dedicated SQL-backed FAQ page with category filtering and keyword search
 │           ├── create_room.html       # Room creation with preferences
 │           ├── join_room.html         # Join room by code
 │           ├── room_detail.html       # Room lobby, participants, shortlist, host controls
@@ -53,6 +71,8 @@ flickpick/
 │           └── profile.html           # Profile details & default movie preferences
 │
 ├── templates/
+│   ├── 404.html                       # Custom 404 error page with 'Ask the assistant' action
+│   ├── 500.html                       # Custom 500 error page with 'Ask the assistant' action
 │   └── registration/
 │       └── login.html                 # Standard Django auth login template reuse
 │
@@ -195,23 +215,135 @@ python manage.py import_movie_datasets [options]
 - **Vote Leaderboard**: Visual vote tally table with proportional percentage bars.
 - **Host Room Reset**: Allows the host to clear votes and restart the room for another movie night.
 
+### D. FlickPick AI — Unified Conversational Assistant (RAG)
+FlickPick AI is a multi-intent assistant powered by Retrieval-Augmented Generation (RAG):
+- **Unified Intent Router**:
+  - `movie_recommendation`: Executes hybrid ORM + FastEmbed semantic retrieval (`BAAI/bge-small-en-v1.5`, 384 dimensions) and multi-factor ranking.
+  - `faq`: Queries SQL-backed FAQs (`FAQ` model) using keyword relevance scoring.
+  - `error_code`: Looks up authoritative error codes (`ErrorCode` model) for HTTP status codes (400, 401, 403, 404, 429, 500, 503) and application codes like `FP-001` (Shortlist Locked). Never invents definitions for unknown codes.
+  - `support_ticket`: Creates persistent support tickets in SQL (`SupportTicket` model) with unique `#FP-XXXXXXXX` tracking codes.
+- **Universal Floating Assistant Widget**: Present on every page via `assistant_widget.html` included in `base.html`, offering instant query assistance, suggested prompt pills, movie recommendations, and user feedback buttons (`/ai/feedback/`).
+- **Strict Grounding & Zero-Hallucination**:
+  - The local database is the primary source of truth.
+  - The LLM receives retrieved candidate records in its prompt context and is strictly prohibited from inventing non-existent movie IDs, runtimes, or unverified facts.
+  - Candidate IDs returned by the model are cross-validated against retrieved database IDs before presentation.
+- **Dual LLM Provider Architecture**: Configurable between local **Ollama** (`qwen3:4b`) and **Google Gemini** (`gemini-2.5-flash` via official `google-genai` SDK), with an instant deterministic fallback when models are offline, rate-limited, or timed out.
+- **Agentic Shortlist Action**: Users can add any recommended movie directly to an active movie-night room shortlist with one click (`/ai/rooms/<room_code>/add-movie/`).
+- **MongoDB Chat Logging & Feedback**: Persists conversation turns, metadata, and user feedback in MongoDB with fail-safe error handling that never disrupts the application if MongoDB is offline.
+
 ---
 
-## 5. Running Automated Tests
+## 5. LLM Provider Setup (Google Gemini & Ollama)
 
-The application includes an extensive test suite covering user authentication, room lifecycles, unauthorized access prevention, duplicate votes, tie calculation, dataset importing, and offline operation without TMDB.
+### Option A: Google Gemini Developer API (Cloud LLM)
+1. Get a Gemini API key from Google AI Studio ([https://ai.google.dev/](https://ai.google.dev/)).
+2. Configure in your local `.env`:
+   ```bash
+   FLICKPICK_AI_ENABLED=true
+   FLICKPICK_LLM_PROVIDER=gemini
+   FLICKPICK_GEMINI_API_KEY=your_actual_gemini_api_key_here
+   FLICKPICK_GEMINI_MODEL=gemini-2.5-flash
+   FLICKPICK_AI_REQUEST_TIMEOUT=15
+   ```
+*(Note: `FLICKPICK_GEMINI_API_KEY` is read strictly on the server and is never committed to Git, exposed to browser JavaScript, or printed in logs).*
 
-Run tests using:
+### Option B: Local Ollama (Local Self-Hosted LLM)
+1. Install and start Ollama:
+   ```bash
+   ollama serve
+   ollama pull qwen3:4b
+   ```
+2. Configure in `.env`:
+   ```bash
+   FLICKPICK_AI_ENABLED=true
+   FLICKPICK_LLM_PROVIDER=ollama
+   OLLAMA_BASE_URL=http://127.0.0.1:11434
+   FLICKPICK_OLLAMA_MODEL=qwen3:4b
+   FLICKPICK_AI_REQUEST_TIMEOUT=25
+   ```
+
+*(Note: If neither provider is active or reachable, FlickPick AI automatically and seamlessly activates its grounded deterministic recommendation engine).*
+
+---
+
+## 6. Semantic Vector Index & Database Seeding
+
+### Seeding FAQs and Error Codes
+Seed at least 12 authoritative FAQs and 8 error code reference entries into the SQL database:
+
+```bash
+python manage.py seed_faqs_and_errors
+```
+
+### Building the Movie Vector Index
+Build or refresh the semantic dense vector embeddings (`data/processed/movie_embeddings.npz`):
+
+```bash
+python manage.py build_movie_embeddings
+```
+
+---
+
+## 7. MongoDB Chat Logging & Feedback Configuration
+
+FlickPick includes built-in MongoDB persistence for chat logs, intent analytics, and user feedback:
+- Configured in `.env`:
+  ```bash
+  MONGODB_URI=mongodb://localhost:27017/
+  MONGODB_DB_NAME=flickpick_logs
+  MONGODB_TIMEOUT_MS=2000
+  ```
+- **Fail-Safe Design**: If MongoDB is offline or unavailable, the application logs an informational notice and continues serving all user requests without interruption or slowdown.
+
+---
+
+## 8. Health Checks, Request Logging & Error Handling
+
+- **Health Check Endpoint**: `GET /health/` returns JSON reporting SQL database status, MongoDB connectivity, LLM provider readiness, and vector index status without exposing internal secrets.
+- **Request Logging Middleware**: Measures request duration in milliseconds and logs sanitized HTTP metadata, automatically redacting sensitive query parameters (e.g. `password`, `token`, `secret`).
+- **Custom Error Handlers**:
+  - `404 Not Found`: Custom `404.html` with SQL-backed troubleshooting instructions and an "Ask the Assistant" button.
+  - `500 Server Error`: Custom `500.html` with safe messaging, incident reference, and assistant actions, preventing exposure of stack traces or secrets.
+
+---
+
+## 9. Running Automated Tests
+
+The application includes an extensive test suite of **63 tests** covering:
+- **User Authentication**: Registration validation, duplicate usernames, passwords, login/logout.
+- **Movie Catalogue & TMDB**: Search, genre/language filtering, detail views, and offline TMDB fallback.
+- **Room Management & Voting**: Room creation, join codes, unique participants, shortlist rules, duplicate vote prevention, host controls, tie-breaking, and room resets.
+- **Dataset Importer**: Idempotent imports, manifest tracking, source limits.
+- **FlickPick AI Preferences & RAG**: Natural language constraints, unsupported attributes, multi-turn follow-ups, semantic retrieval, and candidate ranking.
+- **Google Gemini Provider**: API key handling, mocked successful JSON responses, API error handling, timeouts, and rejection of hallucinated IDs.
+- **Ollama Provider**: Model invocation, timeout fallback, candidate ID validation.
+- **SQL FAQs & ErrorCodes**: Model storage, seeding command, category filter, keyword search, and lookup services.
+- **Support Tickets**: Unique ticket ID generation (`#FP-XXXXXXXX`), SQL model persistence, and API validation.
+- **Custom Error Handlers**: Safe 404 and 500 error templates with assistant actions.
+- **MongoDB Logging & Feedback**: Fail-safe offline operation, feedback submission.
+- **Middleware & Health Check**: Request duration logging, sensitive parameter redaction, and health check output.
+
+Run all tests:
 
 ```bash
 python manage.py test movies -v 2
 ```
 
-All 21 tests execute in an isolated in-memory SQLite database and pass cleanly.
+All 63 tests execute in an isolated in-memory SQLite database and pass cleanly (100% pass rate).
 
 ---
 
-## 6. Security & Best Practices
+## 10. Security, Deployment & Proposed Improvement
+
+### Production Security Checklist
+- Run with `DEBUG=False` in production.
+- Set a strong, unique `SECRET_KEY` in `.env`.
+- Restrict `ALLOWED_HOSTS` to your production domain(s).
+- Serve exclusively over HTTPS with `SECURE_SSL_REDIRECT = True`, `SESSION_COOKIE_SECURE = True`, and `CSRF_COOKIE_SECURE = True`.
+- `.env` is excluded from Git via `.gitignore` to prevent secret leaks.
+
+### Proposed Architectural Improvement
+- **Real-Time Live Voting via WebSockets (Django Channels)**: Integrate Django Channels and an ASGI Redis channel layer to broadcast candidate additions and secret vote count tallies in real-time to all connected room participants without requiring page reloads.
 
 - **CSRF Protection**: All POST forms include Django's `{% csrf_token %}`.
 - **Credential Safety**: Sensitive configuration and optional TMDB API keys reside in `.env`.

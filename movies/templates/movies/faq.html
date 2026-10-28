@@ -1,0 +1,86 @@
+{% extends 'movies/base.html' %}
+
+{% block title %}Frequently Asked Questions — FlickPick{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px; margin: 2rem auto; padding: 0 1rem;">
+  <div style="text-align: center; margin-bottom: 2.5rem;">
+    <h1 style="font-size: 2.2rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem;">
+      Frequently Asked <span style="color: var(--accent-gold);">Questions</span>
+    </h1>
+    <p style="color: var(--text-muted); font-size: 1.05rem; max-width: 650px; margin: 0 auto;">
+      Find authoritative answers about FlickPick movie nights, room codes, voting rules, local datasets, and the AI assistant.
+    </p>
+
+    <!-- Search Form -->
+    <form method="get" action="{% url 'faq' %}" style="margin-top: 1.5rem; display: flex; gap: 0.5rem; justify-content: center; max-width: 500px; margin-left: auto; margin-right: auto;">
+      <input type="text" name="q" value="{{ search_query }}" placeholder="Search FAQs (e.g. voting, room code, AI)..." class="form-input" style="flex: 1; padding: 0.75rem 1rem; border-radius: 8px;">
+      {% if active_category %}
+        <input type="hidden" name="category" value="{{ active_category }}">
+      {% endif %}
+      <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.25rem;">Search</button>
+      {% if search_query %}
+        <a href="{% url 'faq' %}{% if active_category %}?category={{ active_category }}{% endif %}" class="btn btn-secondary" style="padding: 0.75rem 1rem;">Clear</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Category Filter Pills -->
+  <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 2rem;">
+    <a href="{% url 'faq' %}{% if search_query %}?q={{ search_query }}{% endif %}" 
+       class="btn {% if not active_category %}btn-primary{% else %}btn-secondary{% endif %}" 
+       style="font-size: 0.85rem; padding: 0.4rem 1rem; border-radius: 20px;">
+       All Categories
+    </a>
+    {% for cat in categories %}
+      <a href="{% url 'faq' %}?category={{ cat }}{% if search_query %}&q={{ search_query }}{% endif %}" 
+         class="btn {% if active_category == cat %}btn-primary{% else %}btn-secondary{% endif %}" 
+         style="font-size: 0.85rem; padding: 0.4rem 1rem; border-radius: 20px;">
+         {{ cat }}
+      </a>
+    {% endfor %}
+  </div>
+
+  <!-- FAQ List -->
+  {% if faqs %}
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      {% for faq in faqs %}
+        <details class="card" style="padding: 1.25rem; border-radius: 10px; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-color);">
+          <summary style="font-weight: 700; font-size: 1.1rem; color: #fff; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+            <span>{{ faq.question }}</span>
+            <span style="font-size: 0.75rem; color: var(--accent-gold); background: rgba(245, 158, 11, 0.1); padding: 0.2rem 0.6rem; border-radius: 12px; font-weight: 600;">
+              {{ faq.category }}
+            </span>
+          </summary>
+          <div style="margin-top: 1rem; color: var(--text-main); line-height: 1.6; border-top: 1px solid var(--border-color); padding-top: 1rem; font-size: 0.95rem;">
+            {{ faq.answer|linebreaks }}
+          </div>
+        </details>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card" style="text-align: center; padding: 3rem 1rem;">
+      <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 1rem;">
+        No questions matched your search criteria.
+      </p>
+      <a href="{% url 'faq' %}" class="btn btn-secondary">Reset Filters</a>
+    </div>
+  {% endif %}
+
+  <!-- Support Ticket & Assistant Callout -->
+  <div class="card" style="margin-top: 3rem; padding: 2rem; border-radius: 12px; background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)); border: 1px solid var(--border-color); text-align: center;">
+    <h3 style="color: #fff; margin-bottom: 0.5rem; font-size: 1.3rem;">Still have a question?</h3>
+    <p style="color: var(--text-muted); font-size: 0.95rem; max-width: 550px; margin: 0 auto 1.5rem auto;">
+      Ask FlickPick AI directly using the floating assistant widget, or open a support ticket for our engineering team.
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+      <a href="{% url 'ai_chat' %}" class="btn btn-primary">
+        ✨ Open FlickPick AI Chat
+      </a>
+      <button type="button" class="btn btn-secondary" onclick="if(window.openFlickPickWidget){window.openFlickPickWidget('I have a question about FlickPick');}">
+        💬 Quick Assistant
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}

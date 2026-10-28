@@ -1,3 +1,4 @@
+import json
 import random
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
@@ -9,7 +10,23 @@ from django.db import transaction, IntegrityError
 from django.http import HttpResponseForbidden, JsonResponse
 from django.views.decorators.http import require_POST
 
-from .models import Movie, Room, Participant, MovieCandidate, Vote, UserPreference
+from .models import (
+    Movie,
+    Room,
+    Participant,
+    MovieCandidate,
+    Vote,
+    UserPreference,
+    AIConversation,
+    AIMessage,
+    FAQ,
+    ErrorCode,
+    SupportTicket,
+)
+from .ai import get_ai_recommendations
+from .support import get_published_faqs, search_faqs, lookup_error_code, create_support_ticket
+from .mongo import record_feedback, get_mongo_status
+from .ai.retrieval import VectorStore
 from .forms import (
     UserRegistrationForm,
     UserLoginForm,
@@ -618,3 +635,385 @@ def reset_room(request, code):
 
     messages.info(request, "Room reset to waiting state. You can update candidates and vote again.")
     return redirect('room_detail', code=room.code)
+
+
+# ==============================================================================
+# FlickPick AI Views & Endpoints
+# ==============================================================================
+
+@login_required
+def ai_chat_view(request):
+    """
+    Renders the FlickPick AI conversation assistant page.
+    """
+    conversations = AIConversation.objects.filter(user=request.user)
+    conversation_id = request.GET.get('c')
+    active_conversation = None
+
+    if conversation_id:
+        active_conversation = conversations.filter(pk=conversation_id).first()
+
+    if not active_conversation:
+        active_conversation = conversations.first()
+        if not active_conversation:
+            active_conversation = AIConversation.objects.create(
+                user=request.user,
+                title="Movie Recommendations"
+            )
+
+    messages_list = active_conversation.messages.select_related().prefetch_related('recommended_movies').all()
+
+    # Preload user's active waiting rooms for the "+ Add to Shortlist" feature
+    waiting_rooms = Room.objects.filter(
+        participants__user=request.user,
+        status='WAITING'
+    ).distinct()
+
+    context = {
+        'conversations': conversations,
+        'active_conversation': active_conversation,
+        'messages_list': messages_list,
+        'waiting_rooms': waiting_rooms,
+    }
+    return render(request, 'movies/ai_chat.html', context)
+
+
+@require_POST
+def ai_chat_api(request):
+    """
+    AJAX POST endpoint for submitting a user prompt to FlickPick AI.
+    Returns structured recommendations, verified attributes, and explanation.
+    Supports both authenticated members (with persistent conversation history)
+    and anonymous visitors (e.g. from the shared floating widget on public pages).
+    """
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        data = request.POST
+
+    user_message = data.get('message', '').strip()
+    if not user_message:
+        return JsonResponse({'success': False, 'error': 'Message cannot be empty.'}, status=400)
+
+    conversation_id = data.get('conversation_id')
+    conversation = None
+
+    if request.user.is_authenticated:
+        if conversation_id:
+            conversation = get_object_or_404(AIConversation, pk=conversation_id, user=request.user)
+        else:
+            conversation = AIConversation.objects.filter(user=request.user).first()
+            if not conversation:
+                conversation = AIConversation.objects.create(user=request.user, title="Movie Recommendations")
+
+        # Update conversation title on first user turn
+        if conversation.messages.count() == 0:
+            conversation.title = (user_message[:36] + '...') if len(user_message) > 36 else user_message
+            conversation.save()
+    elif conversation_id:
+        # Anonymous users are not permitted to access or hijack registered user conversations
+        return JsonResponse({'success': False, 'error': 'Unauthorized conversation access.'}, status=404)
+
+    # Run hybrid RAG pipeline
+    user_obj = request.user if request.user.is_authenticated else None
+    ai_response = get_ai_recommendations(user_message, user=user_obj, conversation=conversation)
+
+    # Format recommendation items with movie details (poster, IDs, genres, etc.)
+    rec_items = []
+    rec_movie_ids = [r.movie_id for r in ai_response.recommendations]
+    movies_map = {m.pk: m for m in Movie.objects.filter(pk__in=rec_movie_ids)}
+
+    for r in ai_response.recommendations:
+        movie = movies_map.get(r.movie_id)
+        if not movie:
+            continue
+        rec_items.append({
+            'movie_id': movie.pk,
+            'title': movie.title,
+            'language': movie.language,
+            'release_year': movie.release_year,
+            'runtime': movie.runtime,
+            'genres': movie.get_genres_list(),
+            'vote_average': movie.vote_average,
+            'poster_url': movie.get_poster(),
+            'explanation': r.explanation,
+            'verified_attributes': r.verified_attributes,
+            'unverified_notes': r.unverified_notes,
+            'detail_url': f"/movies/{movie.pk}/",
+        })
+
+    return JsonResponse({
+        'success': True,
+        'conversation_id': conversation.pk if conversation else None,
+        'reply_text': ai_response.reply_text,
+        'recommendations': rec_items,
+        'extracted_preferences': ai_response.extracted_preferences,
+        'clarification_question': ai_response.clarification_question,
+        'unsupported_notes': ai_response.unsupported_notes,
+        'is_fallback': ai_response.is_fallback,
+        'intent': ai_response.intent,
+        'faq_items': ai_response.faq_items,
+        'error_code_item': ai_response.error_code_item,
+        'support_ticket': ai_response.support_ticket,
+    })
+
+
+@login_required
+@require_POST
+def ai_clear_conversation(request, conversation_id):
+    """
+    Clears message history for the specified conversation belonging to request.user.
+    """
+    conversation = get_object_or_404(AIConversation, pk=conversation_id, user=request.user)
+    conversation.messages.all().delete()
+    return JsonResponse({'success': True, 'message': 'Conversation history cleared.'})
+
+
+@login_required
+@require_POST
+def ai_add_to_shortlist(request, room_code):
+    """
+    Authorized action: Adds an AI-recommended movie to an active room's shortlist.
+    Enforces strict permissions, validation, and existing room rules.
+    """
+    room = get_object_or_404(Room, code=room_code)
+
+    # 1. Verify user is an authorized participant
+    if not room.is_participant(request.user):
+        return HttpResponseForbidden("You are not a participant in this room.")
+
+    # 2. Verify room permits modifications (must be WAITING)
+    if room.status != 'WAITING':
+        return JsonResponse({
+            'success': False,
+            'error': 'Cannot modify movie shortlist after voting has started or completed.'
+        }, status=400)
+
+    try:
+        data = json.loads(request.body)
+        movie_id = data.get('movie_id')
+    except Exception:
+        movie_id = request.POST.get('movie_id')
+
+    if not movie_id:
+        return JsonResponse({'success': False, 'error': 'Missing movie_id.'}, status=400)
+
+    # 3. Verify movie exists
+    movie = get_object_or_404(Movie, pk=movie_id)
+
+    # 4. Verify movie is not already shortlisted
+    if MovieCandidate.objects.filter(room=room, movie=movie).exists():
+        return JsonResponse({
+            'success': False,
+            'error': f"'{movie.title}' is already in the shortlist for {room.name}."
+        }, status=400)
+
+    # 5. Add candidate
+    MovieCandidate.objects.create(
+        room=room,
+        movie=movie,
+        added_by=request.user
+    )
+
+    return JsonResponse({
+        'success': True,
+        'message': f"Added '{movie.title}' to {room.name} shortlist!",
+        'candidate_count': room.candidates.count()
+    })
+
+
+# ==============================================================================
+# FAQs, Error Pages, Support & Health Check Views
+# ==============================================================================
+
+def faq_view(request):
+    """
+    Renders the dedicated SQL-backed FAQ page with category filtering and keyword search.
+    """
+    category = request.GET.get('category', '').strip()
+    query = request.GET.get('q', '').strip()
+
+    faqs = get_published_faqs(category=category if category else None)
+    if query:
+        faqs = faqs.filter(Q(question__icontains=query) | Q(answer__icontains=query))
+
+    # All distinct categories
+    categories = FAQ.objects.filter(is_published=True).values_list('category', flat=True).distinct().order_by('category')
+
+    context = {
+        'faqs': faqs,
+        'categories': categories,
+        'active_category': category,
+        'search_query': query,
+    }
+    return render(request, 'movies/faq.html', context)
+
+
+def health_check_view(request):
+    """
+    Application health check endpoint reporting status of SQL DB,
+    MongoDB logging, LLM provider readiness, and vector index status
+    without exposing internal secrets or credentials.
+    """
+    from django.db import connection
+    from django.conf import settings
+
+    # Check SQL DB
+    sql_ok = True
+    sql_error = None
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+    except Exception as e:
+        sql_ok = False
+        sql_error = f"{type(e).__name__}"
+
+    # Check MongoDB
+    mongo_status = get_mongo_status()
+
+    # Check LLM Provider readiness
+    provider = getattr(settings, 'FLICKPICK_LLM_PROVIDER', 'ollama').lower()
+    llm_info = {
+        "provider": provider,
+        "configured": False,
+    }
+    if provider == 'gemini':
+        has_key = bool(getattr(settings, 'FLICKPICK_GEMINI_API_KEY', '').strip())
+        llm_info["configured"] = has_key
+        llm_info["model"] = getattr(settings, 'FLICKPICK_GEMINI_MODEL', 'gemini-2.5-flash')
+    elif provider == 'ollama':
+        llm_info["configured"] = True
+        llm_info["model"] = getattr(settings, 'FLICKPICK_OLLAMA_MODEL', 'qwen3:4b')
+
+    # Check FastEmbed Vector Store
+    vstore = VectorStore.get_instance()
+    vector_info = {
+        "loaded": vstore.is_loaded,
+        "indexed_movies_count": len(vstore.movie_ids) if vstore.movie_ids is not None else 0,
+        "model": getattr(settings, 'FLICKPICK_EMBEDDING_MODEL', 'BAAI/bge-small-en-v1.5')
+    }
+
+    # TMDB status
+    tmdb_configured = bool(getattr(settings, 'TMDB_API_KEY', '').strip())
+
+    # Distinguish application liveness from dependency readiness
+    liveness = "alive"
+    if not sql_ok:
+        readiness = "unready"
+        overall_status = "unhealthy"
+        status_code = 503
+    elif not mongo_status.get("available", False):
+        readiness = "degraded"
+        overall_status = "degraded"
+        status_code = 200
+    else:
+        readiness = "ready"
+        overall_status = "ok"
+        status_code = 200
+
+    return JsonResponse({
+        "status": overall_status,
+        "liveness": liveness,
+        "readiness": readiness,
+        "framework": "Django 5.1",
+        "sql_database": {"status": "ok" if sql_ok else "error", "error": sql_error},
+        "mongodb_logging": mongo_status,
+        "llm_assistant": llm_info,
+        "vector_search": vector_info,
+        "tmdb_metadata": {"configured": tmdb_configured},
+    }, status=status_code)
+
+
+@require_POST
+def ai_feedback_api(request):
+    """
+    Submits user feedback (helpful/unhelpful rating and optional comment)
+    persisted into MongoDB without exposing sensitive fields.
+    """
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        data = request.POST
+
+    log_id = data.get('log_id')
+    conversation_id = data.get('conversation_id')
+    rating = data.get('rating', 'helpful')
+    comment = data.get('comment', '')
+
+    success = record_feedback(
+        log_id=log_id,
+        conversation_id=conversation_id,
+        rating=rating,
+        comment=comment,
+        user=request.user if request.user.is_authenticated else None
+    )
+
+    return JsonResponse({
+        'success': True,
+        'persisted_to_mongo': success,
+        'message': 'Thank you for your feedback!'
+    })
+
+
+@require_POST
+def support_ticket_api(request):
+    """
+    Creates a new support ticket in the SQL database.
+    """
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        data = request.POST
+
+    subject = data.get('subject', '').strip()
+    description = data.get('description', '').strip()
+    email = data.get('email', '').strip()
+
+    if not subject or not description:
+        return JsonResponse({
+            'success': False,
+            'error': 'Subject and description are required.'
+        }, status=400)
+
+    ticket = create_support_ticket(
+        subject=subject,
+        description=description,
+        user=request.user if request.user.is_authenticated else None,
+        email=email
+    )
+
+    return JsonResponse({
+        'success': True,
+        'ticket_id': ticket.ticket_id,
+        'status': ticket.status,
+        'message': f"Support ticket #{ticket.ticket_id} created successfully."
+    })
+
+
+def custom_404_view(request, exception=None):
+    """
+    Custom 404 handler with authoritative error explanation and 'Ask the assistant' action.
+    """
+    error_info = lookup_error_code('404')
+    context = {
+        'error_code': '404',
+        'error_title': error_info['title'] if error_info else 'Not Found',
+        'error_description': error_info['description'] if error_info else 'The requested resource could not be found.',
+        'error_resolution': error_info['resolution'] if error_info else 'Verify the requested URL or search the catalogue.',
+    }
+    return render(request, '404.html', context, status=404)
+
+
+def custom_500_view(request):
+    """
+    Custom 500 handler with safe error notice and 'Ask the assistant' action.
+    Never exposes internal exception traces or credentials to visitors.
+    """
+    error_info = lookup_error_code('500')
+    context = {
+        'error_code': '500',
+        'error_title': error_info['title'] if error_info else 'Internal Server Error',
+        'error_description': error_info['description'] if error_info else 'The server encountered an unexpected condition.',
+        'error_resolution': error_info['resolution'] if error_info else 'Try refreshing the page or report the issue to support.',
+    }
+    return render(request, '500.html', context, status=500)

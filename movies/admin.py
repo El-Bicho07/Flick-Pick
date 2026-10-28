@@ -1,5 +1,17 @@
 from django.contrib import admin
-from .models import Movie, Room, Participant, MovieCandidate, Vote, UserPreference
+from .models import (
+    Movie,
+    Room,
+    Participant,
+    MovieCandidate,
+    Vote,
+    UserPreference,
+    AIConversation,
+    AIMessage,
+    FAQ,
+    ErrorCode,
+    SupportTicket,
+)
 
 
 @admin.register(Movie)
@@ -59,3 +71,47 @@ class VoteAdmin(admin.ModelAdmin):
 class UserPreferenceAdmin(admin.ModelAdmin):
     list_display = ('user', 'preferred_genres', 'preferred_languages', 'max_runtime', 'min_year', 'updated_at')
     search_fields = ('user__username', 'preferred_genres', 'preferred_languages')
+
+
+class AIMessageInline(admin.TabularInline):
+    model = AIMessage
+    extra = 0
+    readonly_fields = ('created_at',)
+
+
+@admin.register(AIConversation)
+class AIConversationAdmin(admin.ModelAdmin):
+    list_display = ('title', 'user', 'created_at', 'updated_at')
+    list_filter = ('created_at', 'updated_at')
+    search_fields = ('title', 'user__username')
+    inlines = [AIMessageInline]
+
+
+@admin.register(AIMessage)
+class AIMessageAdmin(admin.ModelAdmin):
+    list_display = ('conversation', 'role', 'created_at')
+    list_filter = ('role', 'created_at')
+    search_fields = ('conversation__title', 'conversation__user__username', 'content')
+
+
+@admin.register(FAQ)
+class FAQAdmin(admin.ModelAdmin):
+    list_display = ('question', 'category', 'is_published', 'order', 'created_at')
+    list_filter = ('category', 'is_published')
+    search_fields = ('question', 'answer')
+    ordering = ('order', 'id')
+
+
+@admin.register(ErrorCode)
+class ErrorCodeAdmin(admin.ModelAdmin):
+    list_display = ('code', 'title', 'category', 'created_at')
+    list_filter = ('category',)
+    search_fields = ('code', 'title', 'description', 'resolution')
+
+
+@admin.register(SupportTicket)
+class SupportTicketAdmin(admin.ModelAdmin):
+    list_display = ('ticket_id', 'subject', 'user', 'email', 'status', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('ticket_id', 'subject', 'description', 'email', 'user__username')
+    readonly_fields = ('ticket_id', 'created_at', 'updated_at')

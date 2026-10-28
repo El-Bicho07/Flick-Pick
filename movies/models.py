@@ -272,3 +272,117 @@ class UserPreference(models.Model):
         if not self.preferred_languages:
             return []
         return [l.strip() for l in self.preferred_languages.split(',') if l.strip()]
+
+
+class AIConversation(models.Model):
+    """
+    Persistent conversation session for FlickPick AI recommendations.
+    Strictly isolated per authenticated user.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ai_conversations')
+    title = models.CharField(max_length=255, default='Movie Recommendations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"{self.user.username}'s AI Chat ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+
+
+class AIMessage(models.Model):
+    """
+    Individual message turn inside an AI conversation, tracking content,
+    extracted preference filters, and recommended movie links.
+    """
+    ROLE_CHOICES = [
+        ('user', 'User'),
+        ('assistant', 'Assistant'),
+        ('system', 'System'),
+    ]
+
+    conversation = models.ForeignKey(AIConversation, on_delete=models.CASCADE, related_name='messages')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='user')
+    content = models.TextField()
+    recommended_movies = models.ManyToManyField(Movie, blank=True, related_name='recommended_in_messages')
+    extracted_preferences = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"[{self.role}] {self.content[:40]}..."
+
+
+class FAQ(models.Model):
+    """
+    Frequently Asked Question model stored in SQL.
+    """
+    question = models.CharField(max_length=255)
+    answer = models.TextField()
+    category = models.CharField(max_length=64, default='General')
+    is_published = models.BooleanField(default=True)
+    order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'category', 'id']
+        verbose_name = "FAQ"
+        verbose_name_plural = "FAQs"
+
+    def __str__(self):
+        return self.question
+
+
+class ErrorCode(models.Model):
+    """
+    Authoritative reference model for HTTP and FlickPick error codes.
+    """
+    code = models.CharField(max_length=16, unique=True, help_text="HTTP status code (e.g. 404) or application code (e.g. FP-001)")
+    title = models.CharField(max_length=128)
+    category = models.CharField(max_length=32, default='HTTP', help_text="e.g. Client Error, Server Error, Application")
+    description = models.TextField(help_text="Clear explanation of the error condition")
+    resolution = models.TextField(help_text="Documented resolution and troubleshooting steps")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['code']
+
+    def __str__(self):
+        return f"{self.code} - {self.title}"
+
+
+class SupportTicket(models.Model):
+    """
+    SQL-backed support ticket created when assistant cannot resolve an inquiry or when user requests support.
+    """
+    STATUS_CHOICES = [
+        ('OPEN', 'Open'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('RESOLVED', 'Resolved'),
+        ('CLOSED', 'Closed'),
+    ]
+
+    ticket_id = models.CharField(max_length=32, unique=True, editable=False)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='support_tickets')
+    email = models.EmailField(blank=True)
+    subject = models.CharField(max_length=255)
+    description = models.TextField()
+    status = models.CharField(max_length=32, choices=STATUS_CHOICES, default='OPEN')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Ticket #{self.ticket_id}: {self.subject}"
+
+    def save(self, *args, **kwargs):
+        if not self.ticket_id:
+            import uuid
+            self.ticket_id = f"FP-{uuid.uuid4().hex[:8].upper()}"
+        super().save(*args, **kwargs)

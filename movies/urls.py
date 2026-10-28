@@ -27,4 +27,16 @@ urlpatterns = [
     path('rooms/<str:code>/end-voting/', views.end_voting, name='end_voting'),
     path('rooms/<str:code>/results/', views.results_view, name='results'),
     path('rooms/<str:code>/reset/', views.reset_room, name='reset_room'),
+
+    # FlickPick AI Assistant
+    path('ai/', views.ai_chat_view, name='ai_chat'),
+    path('ai/chat/', views.ai_chat_api, name='ai_chat_api'),
+    path('ai/feedback/', views.ai_feedback_api, name='ai_feedback_api'),
+    path('ai/ticket/', views.support_ticket_api, name='support_ticket_api'),
+    path('ai/conversations/<int:conversation_id>/clear/', views.ai_clear_conversation, name='ai_clear_conversation'),
+    path('ai/rooms/<str:room_code>/add-movie/', views.ai_add_to_shortlist, name='ai_add_to_shortlist'),
+
+    # FAQs & Health Check
+    path('faq/', views.faq_view, name='faq'),
+    path('health/', views.health_check_view, name='health_check'),
 ]

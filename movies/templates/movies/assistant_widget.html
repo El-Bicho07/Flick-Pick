@@ -1,0 +1,439 @@
+<!-- Reusable FlickPick AI Assistant Widget -->
+<div id="flickpick-ai-widget-root">
+  <!-- Floating Launch Button -->
+  <button id="ai-widget-toggle" 
+          class="ai-widget-fab" 
+          aria-label="Open FlickPick AI Assistant" 
+          aria-expanded="false" 
+          aria-controls="ai-widget-drawer">
+    <span class="ai-widget-fab-icon">✨</span>
+    <span class="ai-widget-fab-label">Ask FlickPick AI</span>
+  </button>
+
+  <!-- Assistant Drawer / Modal Container -->
+  <aside id="ai-widget-drawer" 
+         class="ai-widget-drawer" 
+         role="dialog" 
+         aria-label="FlickPick AI Recommendation Assistant" 
+         aria-modal="true" 
+         hidden>
+    <header class="ai-widget-header">
+      <div class="ai-widget-header-title">
+        <span class="ai-widget-status-dot" aria-hidden="true"></span>
+        <strong>✨ FlickPick AI Assistant</strong>
+      </div>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <a href="{% url 'ai_chat' %}" class="ai-widget-expand-btn" title="Open full chat screen" aria-label="Open full chat page">↗</a>
+        <button id="ai-widget-close" class="ai-widget-close-btn" aria-label="Close Assistant">&times;</button>
+      </div>
+    </header>
+
+    <div id="ai-widget-messages" class="ai-widget-body" role="log" aria-live="polite">
+      <!-- Welcome message -->
+      <div class="ai-msg ai-msg-bot">
+        <div class="ai-msg-bubble">
+          👋 Hi! I'm your FlickPick movie & support assistant. Ask me for movie recommendations (*"Tamil thrillers under 2 hours"*), FAQs (*"How does voting work?"*), or error codes (*"Error 404"*).
+        </div>
+      </div>
+    </div>
+
+    <!-- Suggested quick prompt pills -->
+    <div class="ai-widget-suggestions" aria-label="Suggested Prompts">
+      <button type="button" class="ai-pill" onclick="window.sendWidgetPrompt('Recommend top rated movies')">🎬 Top Rated</button>
+      <button type="button" class="ai-pill" onclick="window.sendWidgetPrompt('How does voting work?')">🗳️ Voting</button>
+      <button type="button" class="ai-pill" onclick="window.sendWidgetPrompt('What does error 404 mean?')">⚠️ Error 404</button>
+    </div>
+
+    <!-- Input Form -->
+    <form id="ai-widget-form" class="ai-widget-footer">
+      {% csrf_token %}
+      <input type="text" 
+             id="ai-widget-input" 
+             class="ai-widget-input" 
+             placeholder="Ask for movies, FAQs, or errors..." 
+             autocomplete="off" 
+             required>
+      <button type="submit" id="ai-widget-send" class="btn btn-primary btn-sm" aria-label="Send Message">
+        ➤
+      </button>
+    </form>
+  </aside>
+</div>
+
+<style>
+/* FlickPick AI Floating Widget Styles */
+.ai-widget-fab {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9990;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #0f172a;
+  border: none;
+  border-radius: 30px;
+  padding: 0.75rem 1.25rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.ai-widget-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(245, 158, 11, 0.55);
+}
+.ai-widget-fab-icon { font-size: 1.2rem; }
+
+.ai-widget-drawer {
+  position: fixed;
+  bottom: 5.5rem;
+  right: 1.5rem;
+  width: 380px;
+  max-width: calc(100vw - 2rem);
+  height: 520px;
+  max-height: calc(100vh - 7rem);
+  background: var(--bg-card, #1e293b);
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55);
+  z-index: 9995;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ai-widget-drawer[hidden] { display: none !important; }
+
+.ai-widget-header {
+  padding: 0.85rem 1.1rem;
+  background: rgba(15, 23, 42, 0.9);
+  border-bottom: 1px solid var(--border-color, #334155);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ai-widget-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #fff;
+  font-size: 0.95rem;
+}
+.ai-widget-status-dot {
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  display: inline-block;
+}
+.ai-widget-close-btn, .ai-widget-expand-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+}
+.ai-widget-close-btn:hover, .ai-widget-expand-btn:hover {
+  color: #fff;
+}
+
+.ai-widget-body {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.ai-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 90%;
+}
+.ai-msg-bot { align-self: flex-start; }
+.ai-msg-user { align-self: flex-end; }
+
+.ai-msg-bubble {
+  padding: 0.65rem 0.9rem;
+  border-radius: 12px;
+  line-height: 1.45;
+}
+.ai-msg-bot .ai-msg-bubble {
+  background: rgba(15, 23, 42, 0.75);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom-left-radius: 2px;
+}
+.ai-msg-user .ai-msg-bubble {
+  background: var(--accent-gold, #f59e0b);
+  color: #0f172a;
+  font-weight: 500;
+  border-bottom-right-radius: 2px;
+}
+
+.ai-widget-card-item {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  margin-top: 0.4rem;
+}
+.ai-widget-card-title {
+  font-weight: 700;
+  color: var(--accent-gold, #f59e0b);
+  font-size: 0.88rem;
+}
+.ai-widget-card-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 0.15rem;
+}
+.ai-widget-card-desc {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  margin-top: 0.35rem;
+}
+
+.ai-widget-suggestions {
+  padding: 0.4rem 0.75rem;
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  background: rgba(15, 23, 42, 0.5);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.ai-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ai-pill:hover {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: var(--accent-gold, #f59e0b);
+  color: #fff;
+}
+
+.ai-widget-footer {
+  padding: 0.75rem;
+  background: rgba(15, 23, 42, 0.95);
+  border-top: 1px solid var(--border-color, #334155);
+  display: flex;
+  gap: 0.5rem;
+}
+.ai-widget-input {
+  flex: 1;
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+.ai-widget-input:focus {
+  outline: none;
+  border-color: var(--accent-gold, #f59e0b);
+}
+
+.ai-feedback-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+}
+.ai-feedback-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-muted, #94a3b8);
+  border-radius: 6px;
+  padding: 0.1rem 0.4rem;
+  cursor: pointer;
+}
+.ai-feedback-btn:hover {
+  border-color: var(--accent-gold, #f59e0b);
+  color: #fff;
+}
+
+@media (max-width: 480px) {
+  .ai-widget-drawer {
+    right: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+    bottom: 4.5rem;
+    height: 480px;
+  }
+}
+</style>
+
+<script>
+// FlickPick Assistant Widget Client Logic
+(function() {
+  const toggleBtn = document.getElementById('ai-widget-toggle');
+  const drawer = document.getElementById('ai-widget-drawer');
+  const closeBtn = document.getElementById('ai-widget-close');
+  const form = document.getElementById('ai-widget-form');
+  const input = document.getElementById('ai-widget-input');
+  const messages = document.getElementById('ai-widget-messages');
+
+  if (!toggleBtn || !drawer) return;
+
+  function toggleWidget(forceOpen = null) {
+    const isClosed = drawer.hasAttribute('hidden');
+    const shouldOpen = forceOpen !== null ? forceOpen : isClosed;
+
+    if (shouldOpen) {
+      drawer.removeAttribute('hidden');
+      toggleBtn.setAttribute('aria-expanded', 'true');
+      input && input.focus();
+    } else {
+      drawer.setAttribute('hidden', '');
+      toggleBtn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  toggleBtn.addEventListener('click', () => toggleWidget());
+  closeBtn.addEventListener('click', () => toggleWidget(false));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !drawer.hasAttribute('hidden')) {
+      toggleWidget(false);
+    }
+  });
+
+  // Global helper for opening widget from 404/500/FAQ pages
+  window.openFlickPickWidget = function(prefill = '') {
+    toggleWidget(true);
+    if (prefill && input) {
+      input.value = prefill;
+      window.sendWidgetPrompt(prefill);
+    }
+  };
+
+  window.sendWidgetPrompt = function(promptText) {
+    if (input) input.value = promptText;
+    form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+  };
+
+  window.submitWidgetFeedback = function(btn, rating, conversationId) {
+    btn.disabled = true;
+    btn.textContent = rating === 'helpful' ? '👍 Thank you!' : '👎 Noted';
+
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    fetch('/ai/feedback/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrf
+      },
+      body: JSON.stringify({
+        rating: rating,
+        conversation_id: conversationId,
+        comment: 'Submitted via floating widget'
+      })
+    }).catch(() => {});
+  };
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const query = input.value.trim();
+    if (!query) return;
+
+    // Append user message
+    const userMsg = document.createElement('div');
+    userMsg.className = 'ai-msg ai-msg-user';
+    userMsg.innerHTML = `<div class="ai-msg-bubble">${escapeHtml(query)}</div>`;
+    messages.appendChild(userMsg);
+    input.value = '';
+
+    // Append typing indicator
+    const typingMsg = document.createElement('div');
+    typingMsg.className = 'ai-msg ai-msg-bot';
+    typingMsg.id = 'ai-widget-typing';
+    typingMsg.innerHTML = `<div class="ai-msg-bubble" style="color: var(--accent-gold);">Thinking...</div>`;
+    messages.appendChild(typingMsg);
+    messages.scrollTop = messages.scrollHeight;
+
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+    try {
+      const res = await fetch('/ai/chat/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrf
+        },
+        body: JSON.stringify({ message: query })
+      });
+
+      typingMsg.remove();
+
+      if (!res.ok) {
+        throw new Error('Server returned ' + res.status);
+      }
+
+      const data = await res.json();
+      const botMsg = document.createElement('div');
+      botMsg.className = 'ai-msg ai-msg-bot';
+
+      let contentHtml = `<div class="ai-msg-bubble">${formatReply(data.reply_text)}`;
+
+      // Append recommendation cards if present
+      if (data.recommendations && data.recommendations.length > 0) {
+        data.recommendations.forEach(r => {
+          contentHtml += `
+            <div class="ai-widget-card-item">
+              <div class="ai-widget-card-title">${escapeHtml(r.title)} (${r.release_year || 'Unknown'})</div>
+              <div class="ai-widget-card-meta">${escapeHtml(r.language || '')} • ${escapeHtml((r.genres || []).join(', '))}</div>
+              <div class="ai-widget-card-desc">${escapeHtml(r.explanation || '')}</div>
+              <div style="margin-top: 0.3rem;"><a href="${r.detail_url}" target="_blank" style="color: var(--accent-gold); font-size: 0.75rem;">View Details ↗</a></div>
+            </div>`;
+        });
+      }
+
+      // Add feedback buttons
+      contentHtml += `
+        <div class="ai-feedback-bar">
+          <span style="color: var(--text-muted);">Helpful?</span>
+          <button type="button" class="ai-feedback-btn" onclick="window.submitWidgetFeedback(this, 'helpful', ${data.conversation_id || null})">👍 Yes</button>
+          <button type="button" class="ai-feedback-btn" onclick="window.submitWidgetFeedback(this, 'unhelpful', ${data.conversation_id || null})">👎 No</button>
+        </div>`;
+
+      contentHtml += `</div>`;
+      botMsg.innerHTML = contentHtml;
+      messages.appendChild(botMsg);
+    } catch (err) {
+      typingMsg.remove();
+      const errorMsg = document.createElement('div');
+      errorMsg.className = 'ai-msg ai-msg-bot';
+      errorMsg.innerHTML = `
+        <div class="ai-msg-bubble" style="border-color: #ef4444;">
+          ⚠️ Unable to get a response. Please check your connection or visit the <a href="/ai/" style="color: var(--accent-gold);">full AI page</a>.
+        </div>`;
+      messages.appendChild(errorMsg);
+    }
+
+    messages.scrollTop = messages.scrollHeight;
+  });
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+  }
+
+  function formatReply(text) {
+    if (!text) return '';
+    return escapeHtml(text).replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  }
+})();
+</script>

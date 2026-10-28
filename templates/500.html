@@ -1,0 +1,38 @@
+{% extends 'movies/base.html' %}
+
+{% block title %}500 Server Error — FlickPick{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 700px; margin: 4rem auto; padding: 0 1rem; text-align: center;">
+  <div class="card" style="padding: 3rem 2rem; border-radius: 14px; background: var(--bg-card); border: 1px solid var(--border-color); box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
+    <div style="font-size: 4.5rem; font-weight: 900; color: #ef4444; line-height: 1; margin-bottom: 0.5rem;">
+      500
+    </div>
+    <h1 style="font-size: 1.8rem; font-weight: 800; color: #fff; margin-bottom: 1rem;">
+      {{ error_title|default:"Internal Server Error" }}
+    </h1>
+    <p style="color: var(--text-main); font-size: 1.05rem; line-height: 1.6; margin-bottom: 1.5rem;">
+      {{ error_description|default:"The server encountered an unexpected error while processing your request. Internal diagnostic details have been logged securely." }}
+    </p>
+
+    <div style="background: rgba(15, 23, 42, 0.6); padding: 1.25rem; border-radius: 8px; border: 1px solid var(--border-color); text-align: left; margin-bottom: 2rem;">
+      <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent-gold); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem;">
+        💡 Recommended Action
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0; line-height: 1.5;">
+        {{ error_resolution|default:"Try refreshing the page in a few moments, or ask the FlickPick assistant to report this issue or create a support ticket." }}
+      </p>
+    </div>
+
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+      <a href="{% url 'home' %}" class="btn btn-primary" style="padding: 0.75rem 1.5rem;">
+        🏠 Return Home
+      </a>
+      <button type="button" class="btn btn-secondary" style="color: var(--accent-gold); border-color: var(--accent-gold);"
+              onclick="if(window.openFlickPickWidget){window.openFlickPickWidget('Explain error 500 and how to report it');}">
+        🤖 Ask the Assistant
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,561 @@
+{% extends 'movies/base.html' %}
+{% load static %}
+
+{% block title %}FlickPick AI — Intelligent Movie Recommendation Assistant{% endblock %}
+
+{% block extra_css %}
+<style>
+  #ai-widget-root { display: none !important; }
+  .chat-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 1.5rem;
+    height: calc(100vh - 160px);
+    min-height: 600px;
+  }
+  @media (max-width: 860px) {
+    .chat-layout {
+      grid-template-columns: 1fr;
+      height: auto;
+    }
+    .chat-sidebar {
+      display: none;
+    }
+  }
+  .chat-sidebar {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .chat-main {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .chat-header {
+    padding: 1rem 1.5rem;
+    background: rgba(18, 24, 36, 0.95);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .msg-row {
+    display: flex;
+    gap: 0.75rem;
+    max-width: 85%;
+  }
+  .msg-row.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+  .msg-row.assistant {
+    align-self: flex-start;
+  }
+  .msg-bubble {
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .msg-row.user .msg-bubble {
+    background: var(--accent-gold);
+    color: #0b0f17;
+    font-weight: 500;
+    border-bottom-right-radius: 2px;
+  }
+  .msg-row.assistant .msg-bubble {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    border-bottom-left-radius: 2px;
+  }
+  .prompt-pill {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+  }
+  .prompt-pill:hover {
+    border-color: var(--accent-gold);
+    color: var(--text-primary);
+    background: var(--bg-card-hover);
+  }
+  .rec-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  .rec-card {
+    background: #0d131f;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+  }
+  .rec-card:hover {
+    border-color: var(--accent-gold);
+    transform: translateY(-2px);
+  }
+  .rec-card-poster {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #020617;
+    overflow: hidden;
+    position: relative;
+  }
+  .rec-card-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .chat-input-area {
+    padding: 1.25rem 1.5rem;
+    background: rgba(14, 20, 32, 0.95);
+    border-top: 1px solid var(--border-subtle);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-layout">
+  <!-- Left Sidebar: Conversations & Tips -->
+  <aside class="chat-sidebar">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h2 style="font-size: 1.05rem; font-weight: 700;">Sessions</h2>
+      <a href="{% url 'ai_chat' %}" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;">+ New Chat</a>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1.5rem;">
+      {% for conv in conversations %}
+        <a href="?c={{ conv.pk }}" style="padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); font-size: 0.85rem; text-decoration: none; color: {% if conv.pk == active_conversation.pk %}var(--accent-gold){% else %}var(--text-secondary){% endif %}; background: {% if conv.pk == active_conversation.pk %}rgba(245, 158, 11, 0.1){% else %}transparent{% endif %}; border: 1px solid {% if conv.pk == active_conversation.pk %}rgba(245, 158, 11, 0.3){% else %}transparent{% endif %}; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          💬 {{ conv.title }}
+        </a>
+      {% empty %}
+        <span style="font-size: 0.8rem; color: var(--text-muted);">No saved chats yet.</span>
+      {% endfor %}
+    </div>
+
+    <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 0 0 1rem 0;">
+
+    <h3 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 0.75rem;">
+      Sample Prompts
+    </h3>
+    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+      <button type="button" class="prompt-pill sample-prompt-btn" data-text="Recommend 3 Tamil thrillers under 2 hours">
+        🎯 3 Tamil thrillers under 2 hours
+      </button>
+      <button type="button" class="prompt-pill sample-prompt-btn" data-text="We want a light-hearted Malayalam movie for tonight">
+        🌴 Light-hearted Malayalam movie
+      </button>
+      <button type="button" class="prompt-pill sample-prompt-btn" data-text="Suggest a science-fiction movie with a clever plot and time loop">
+        🚀 Sci-Fi with clever time loop
+      </button>
+      <button type="button" class="prompt-pill sample-prompt-btn" data-text="Find a family-friendly comedy for a group of five">
+        👨‍👩‍👧‍👦 Family comedy for group of 5
+      </button>
+      <button type="button" class="prompt-pill sample-prompt-btn" data-text="We want a comedy, but one friend prefers action">
+        🤝 Action-Comedy group compromise
+      </button>
+    </div>
+  </aside>
+
+  <!-- Right: Main Chat Canvas -->
+  <main class="chat-main">
+    <!-- Chat Header -->
+    <header class="chat-header">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span style="font-size: 1.5rem;">✨</span>
+        <div>
+          <h1 style="font-size: 1.15rem; font-weight: 800; line-height: 1.2;">FlickPick AI</h1>
+          <p style="font-size: 0.78rem; color: var(--text-muted);">
+            RAG Assistant &bull; 10,252 Local Movies &bull; Ollama Qwen 4B
+          </p>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <button type="button" class="btn btn-secondary btn-sm" id="clear-chat-btn" data-conv-id="{{ active_conversation.pk }}">
+          🗑️ Clear Messages
+        </button>
+      </div>
+    </header>
+
+    <!-- Chat Messages Stream -->
+    <div class="chat-messages" id="chat-stream">
+      <!-- Welcome Intro -->
+      <div class="msg-row assistant">
+        <div style="font-size: 1.3rem;">🤖</div>
+        <div class="msg-bubble">
+          <p style="margin-bottom: 0.5rem; font-weight: 600; color: var(--accent-gold);">
+            Welcome to FlickPick AI!
+          </p>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">
+            I can find movie recommendations tailored to your group. Ask me by language, genre, runtime, decade, or plot concept. You can also directly nominate recommended movies to your movie-night rooms!
+          </p>
+        </div>
+      </div>
+
+      <!-- Historical turns -->
+      {% for msg in messages_list %}
+        <div class="msg-row {{ msg.role }}">
+          {% if msg.role == 'assistant' %}<div style="font-size: 1.3rem;">🤖</div>{% endif %}
+          <div class="msg-bubble">
+            <p>{{ msg.content }}</p>
+
+            {% if msg.recommended_movies.exists %}
+              <div class="rec-card-grid">
+                {% for m in msg.recommended_movies.all %}
+                  <div class="rec-card">
+                    <div class="rec-card-poster">
+                      <img src="{{ m.get_poster }}" alt="{{ m.title }}" loading="lazy">
+                    </div>
+                    <div style="padding: 0.85rem; display: flex; flex-direction: column; flex: 1;">
+                      <a href="{% url 'movie_detail' pk=m.pk %}" style="font-weight: 700; color: var(--text-primary); text-decoration: none; font-size: 0.95rem; margin-bottom: 0.25rem;">
+                        {{ m.title }}
+                      </a>
+                      <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        {{ m.language }} &bull; {% if m.release_year %}{{ m.release_year }} &bull;{% endif %} {% if m.runtime %}{{ m.runtime }}m{% endif %}
+                      </div>
+                      <div style="margin-top: auto; display: flex; gap: 0.5rem;">
+                        <a href="{% url 'movie_detail' pk=m.pk %}" class="btn btn-secondary btn-sm" style="flex: 1; font-size: 0.75rem;">Details</a>
+                        {% if waiting_rooms %}
+                          <select class="form-select add-to-room-select" data-movie-id="{{ m.pk }}" style="flex: 1.2; font-size: 0.75rem; padding: 0.2rem 0.5rem;">
+                            <option value="">+ Add to Room</option>
+                            {% for r in waiting_rooms %}
+                              <option value="{{ r.code }}">{{ r.name }}</option>
+                            {% endfor %}
+                          </select>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Quick refinement chips -->
+    <div style="padding: 0.5rem 1.5rem; background: rgba(18, 24, 36, 0.7); display: flex; gap: 0.5rem; overflow-x: auto;" id="refinement-bar">
+      <span style="font-size: 0.75rem; color: var(--text-muted); align-self: center;">Refine:</span>
+      <button type="button" class="prompt-pill sample-prompt-btn" data-text="Can you find something shorter?">⏱️ Something shorter</button>
+      <button type="button" class="prompt-pill sample-prompt-btn" data-text="Show me more like the first movie">🎬 More like the 1st one</button>
+      <button type="button" class="prompt-pill sample-prompt-btn" data-text="Exclude that movie and show alternatives">🚫 Exclude that one</button>
+      <button type="button" class="prompt-pill sample-prompt-btn" data-text="Make it more family friendly">👨‍👩‍👧 Family friendly</button>
+    </div>
+
+    <!-- Chat Input Area -->
+    <div class="chat-input-area">
+      <form id="chat-form" style="display: flex; gap: 0.75rem;">
+        {% csrf_token %}
+        <input type="hidden" id="conv-id-input" value="{{ active_conversation.pk }}">
+        <input
+          type="text"
+          id="chat-input"
+          class="form-input"
+          placeholder="Ask for movie recommendations (e.g. 'Three Tamil thrillers under 2 hours')..."
+          autocomplete="off"
+          style="flex: 1;"
+        >
+        <button type="submit" class="btn btn-primary" id="chat-submit-btn" style="min-width: 100px;">
+          <span>Send</span>
+        </button>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const chatStream = document.getElementById('chat-stream');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const submitBtn = document.getElementById('chat-submit-btn');
+  const convIdInput = document.getElementById('conv-id-input');
+  const clearBtn = document.getElementById('clear-chat-btn');
+
+  // Pre-cached waiting rooms for dynamic cards
+  const waitingRooms = [
+    {% for r in waiting_rooms %}
+      { code: "{{ r.code }}", name: "{{ r.name|escapejs }}" },
+    {% endfor %}
+  ];
+
+  // Helper: Scroll chat to bottom
+  const scrollToBottom = () => {
+    chatStream.scrollTop = chatStream.scrollHeight;
+  };
+  scrollToBottom();
+
+  // Helper: Get CSRF token
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  // Sample prompt clicks
+  document.querySelectorAll('.sample-prompt-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      chatInput.value = btn.getAttribute('data-text');
+      chatInput.focus();
+    });
+  });
+
+  // Clear messages
+  if (clearBtn) {
+    clearBtn.addEventListener('click', async () => {
+      const convId = clearBtn.getAttribute('data-conv-id');
+      if (!confirm('Clear message history for this session?')) return;
+
+      try {
+        const res = await fetch(`/ai/conversations/${convId}/clear/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrftoken,
+            'Content-Type': 'application/json'
+          }
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.location.reload();
+        }
+      } catch (err) {
+        console.error('Error clearing conversation:', err);
+      }
+    });
+  }
+
+  // Handle Form Submission
+  chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    chatInput.value = '';
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = 'Thinking...';
+
+    // Append user message immediately
+    const userRow = document.createElement('div');
+    userRow.className = 'msg-row user';
+    userRow.innerHTML = `<div class="msg-bubble"><p>${escapeHtml(text)}</p></div>`;
+    chatStream.appendChild(userRow);
+    scrollToBottom();
+
+    // Append temporary assistant loading bubble
+    const loadingRow = document.createElement('div');
+    loadingRow.className = 'msg-row assistant';
+    loadingRow.id = 'loading-indicator';
+    loadingRow.innerHTML = `
+      <div style="font-size: 1.3rem;">🤖</div>
+      <div class="msg-bubble" style="color: var(--text-muted);">
+        <span>Searching catalogue &amp; formulating recommendations...</span>
+      </div>
+    `;
+    chatStream.appendChild(loadingRow);
+    scrollToBottom();
+
+    try {
+      const response = await fetch('/ai/chat/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken,
+        },
+        body: JSON.stringify({
+          message: text,
+          conversation_id: convIdInput.value || null
+        })
+      });
+
+      const data = await response.json();
+      loadingRow.remove();
+
+      if (!data.success) {
+        appendErrorRow(data.error || 'Failed to generate recommendations.');
+        return;
+      }
+
+      // Render assistant response bubble
+      const asstRow = document.createElement('div');
+      asstRow.className = 'msg-row assistant';
+
+      let recsHtml = '';
+      if (data.recommendations && data.recommendations.length > 0) {
+        recsHtml = `<div class="rec-card-grid">`;
+        data.recommendations.forEach(rec => {
+          let roomOptions = '<option value="">+ Add to Room</option>';
+          waitingRooms.forEach(wr => {
+            roomOptions += `<option value="${wr.code}">${escapeHtml(wr.name)}</option>`;
+          });
+
+          const genresStr = rec.genres ? rec.genres.join(', ') : '';
+          const metaStr = `${escapeHtml(rec.language || '')} &bull; ${rec.release_year || ''} &bull; ${rec.runtime ? rec.runtime + 'm' : ''}`;
+
+          recsHtml += `
+            <div class="rec-card">
+              <div class="rec-card-poster">
+                <img src="${rec.poster_url}" alt="${escapeHtml(rec.title)}" loading="lazy">
+              </div>
+              <div style="padding: 0.85rem; display: flex; flex-direction: column; flex: 1;">
+                <a href="${rec.detail_url}" style="font-weight: 700; color: var(--text-primary); text-decoration: none; font-size: 0.95rem; margin-bottom: 0.25rem;">
+                  ${escapeHtml(rec.title)}
+                </a>
+                <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                  ${metaStr}
+                </div>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 0.75rem;">
+                  ${escapeHtml(rec.explanation)}
+                </p>
+                ${rec.unverified_notes ? `<div style="font-size: 0.72rem; color: var(--accent-gold); margin-bottom: 0.5rem;">⚠️ ${escapeHtml(rec.unverified_notes)}</div>` : ''}
+                <div style="margin-top: auto; display: flex; gap: 0.5rem;">
+                  <a href="${rec.detail_url}" class="btn btn-secondary btn-sm" style="flex: 1; font-size: 0.75rem;">Details</a>
+                  ${waitingRooms.length > 0 ? `
+                    <select class="form-select add-to-room-select" data-movie-id="${rec.movie_id}" style="flex: 1.3; font-size: 0.75rem; padding: 0.2rem 0.5rem;">
+                      ${roomOptions}
+                    </select>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        recsHtml += `</div>`;
+      }
+
+      let extraNotes = '';
+      if (data.clarification_question) {
+        extraNotes += `<div style="margin-top: 0.75rem; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 0.6rem 0.9rem; border-radius: var(--radius-sm); font-size: 0.85rem; color: #bae6fd;">💡 ${escapeHtml(data.clarification_question)}</div>`;
+      }
+      if (data.unsupported_notes) {
+        extraNotes += `<div style="margin-top: 0.5rem; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 0.5rem 0.8rem; border-radius: var(--radius-sm); font-size: 0.8rem; color: #fde68a;">ℹ️ ${escapeHtml(data.unsupported_notes)}</div>`;
+      }
+
+      asstRow.innerHTML = `
+        <div style="font-size: 1.3rem;">🤖</div>
+        <div class="msg-bubble" style="width: 100%;">
+          <p style="margin-bottom: 0.5rem;">${escapeHtml(data.reply_text)}</p>
+          ${recsHtml}
+          ${extraNotes}
+        </div>
+      `;
+      chatStream.appendChild(asstRow);
+      scrollToBottom();
+      attachRoomSelectListeners();
+
+    } catch (err) {
+      loadingRow.remove();
+      appendErrorRow('Network error or server timeout. Please try again.');
+      console.error('Chat error:', err);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>Send</span>';
+      chatInput.focus();
+    }
+  });
+
+  function appendErrorRow(errMsg) {
+    const errRow = document.createElement('div');
+    errRow.className = 'msg-row assistant';
+    errRow.innerHTML = `
+      <div style="font-size: 1.3rem;">⚠️</div>
+      <div class="msg-bubble" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5;">
+        <p>${escapeHtml(errMsg)}</p>
+      </div>
+    `;
+    chatStream.appendChild(errRow);
+    scrollToBottom();
+  }
+
+  function attachRoomSelectListeners() {
+    document.querySelectorAll('.add-to-room-select').forEach(select => {
+      select.removeEventListener('change', handleRoomAdd);
+      select.addEventListener('change', handleRoomAdd);
+    });
+  }
+
+  async function handleRoomAdd(e) {
+    const select = e.target;
+    const roomCode = select.value;
+    const movieId = select.getAttribute('data-movie-id');
+    if (!roomCode || !movieId) return;
+
+    try {
+      const res = await fetch(`/ai/rooms/${roomCode}/add-movie/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken,
+        },
+        body: JSON.stringify({ movie_id: movieId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Success: ${data.message}`);
+        select.value = '';
+      } else {
+        alert(`Notice: ${data.error}`);
+        select.value = '';
+      }
+    } catch (err) {
+      alert('Failed to add movie to room shortlist.');
+      select.value = '';
+    }
+  }
+
+  attachRoomSelectListeners();
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>"']/g, m => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[m]));
+  }
+});
+</script>
+{% endblock %}

@@ -150,7 +150,7 @@ CANONICAL_VERIFIED_REGISTRY: Dict[str, Dict[str, Any]] = {
         "cast": "Allu Arjun, Fahadh Faasil, Rashmika Mandanna, Jagadeesh Prathap Bandari",
         "genres": "Action, Crime, Drama",
         "runtime": 179,
-        "tmdb_id": "766396",
+        "tmdb_id": "690957",
         "imdb_id": "tt9389998",
         "overview": (
             "In the Seshachalam forests of Andhra Pradesh, a fearless coolie named Pushpa Raj ascends "
@@ -159,7 +159,7 @@ CANONICAL_VERIFIED_REGISTRY: Dict[str, Dict[str, Any]] = {
         ),
         "poster_url": "https://image.tmdb.org/t/p/w500/4DpNRjV7ITZ1GzCvrvCk86th0w.jpg",
         "source": "tmdb",
-        "source_url": "https://www.themoviedb.org/movie/766396-pushpa-the-rise-part-1",
+        "source_url": "https://www.themoviedb.org/movie/690957-pushpa-the-rise-part-1",
     },
     "kgf: chapter 1": {
         "title": "KGF: Chapter 1",
@@ -170,15 +170,15 @@ CANONICAL_VERIFIED_REGISTRY: Dict[str, Dict[str, Any]] = {
         "cast": "Yash, Srinidhi Shetty, Ramachandra Raju, Archana Jois",
         "genres": "Action, Drama",
         "runtime": 156,
-        "tmdb_id": "560371",
-        "imdb_id": "tt7181578",
+        "tmdb_id": "564147",
+        "imdb_id": "tt7838252",
         "overview": (
             "Rocky, a fierce young man rising from Mumbai's criminal underworld, takes on a deadly assignment "
             "to assassinate the ruthless tyrant of the Kolar Gold Fields, igniting a rebellion among enslaved miners."
         ),
-        "poster_url": "https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg",
+        "poster_url": "https://image.tmdb.org/t/p/w500/43ZvmTzIJ0tTzgLG8sDOfg9roLF.jpg",
         "source": "tmdb",
-        "source_url": "https://www.themoviedb.org/movie/560371-kgf-chapter-1",
+        "source_url": "https://www.themoviedb.org/movie/564147-kgf-chapter-1",
     },
     "drishyam": {
         "title": "Drishyam",
@@ -189,15 +189,15 @@ CANONICAL_VERIFIED_REGISTRY: Dict[str, Dict[str, Any]] = {
         "cast": "Mohanlal, Meena, Ansiba Hassan, Esther Anil, Asha Sharath",
         "genres": "Crime, Drama, Thriller",
         "runtime": 160,
-        "tmdb_id": "242224",
+        "tmdb_id": "244049",
         "imdb_id": "tt3417422",
         "overview": (
             "A cable TV operator and devoted father uses his encyclopedic knowledge of cinema to fabricate "
             "an airtight alibi and shield his family after an accidental death embroils them in an intense police investigation."
         ),
-        "poster_url": "https://image.tmdb.org/t/p/w500/qt3fqapeo94TfvMyld8P7gkpXLz.jpg",
+        "poster_url": "https://image.tmdb.org/t/p/w500/gPBldHTnqpgsrnDnSrAlFwE6Q1t.jpg",
         "source": "tmdb",
-        "source_url": "https://www.themoviedb.org/movie/242224-drishyam",
+        "source_url": "https://www.themoviedb.org/movie/244049-drishyam",
     },
     "jab we met": {
         "title": "Jab We Met",
@@ -208,7 +208,7 @@ CANONICAL_VERIFIED_REGISTRY: Dict[str, Dict[str, Any]] = {
         "cast": "Shahid Kapoor, Kareena Kapoor, Tarun Arora, Dara Singh",
         "genres": "Comedy, Drama, Romance",
         "runtime": 138,
-        "tmdb_id": "11674",
+        "tmdb_id": "11807",
         "imdb_id": "tt1093370",
         "overview": (
             "A depressed industrialist aimlessly boards a train and crosses paths with a bubbly, free-spirited Punjabi girl. "
@@ -216,7 +216,7 @@ CANONICAL_VERIFIED_REGISTRY: Dict[str, Dict[str, Any]] = {
         ),
         "poster_url": "https://image.tmdb.org/t/p/w500/iqiH6vnoEgjAypKsuIScN7JlE2j.jpg",
         "source": "tmdb",
-        "source_url": "https://www.themoviedb.org/movie/11674-jab-we-met",
+        "source_url": "https://www.themoviedb.org/movie/11807-jab-we-met",
     },
     "kalki 2898 ad": {
         "title": "Kalki 2898 AD",
@@ -246,15 +246,15 @@ CANONICAL_VERIFIED_REGISTRY: Dict[str, Dict[str, Any]] = {
         "cast": "Soubin Shahir, Sreenath Bhasi, Balu Varghese, Ganapathi",
         "genres": "Adventure, Drama, Thriller",
         "runtime": 135,
-        "tmdb_id": "1078449",
-        "imdb_id": "tt26456044",
+        "tmdb_id": "1069945",
+        "imdb_id": "tt26458038",
         "overview": (
             "Based on true events from 2006, a tight-knit group of friends from Kochi vacationing in Kodaikanal "
             "mount a daring, selfless rescue mission when one of their friends falls deep into the perilous Guna Caves."
         ),
         "poster_url": "https://image.tmdb.org/t/p/w500/bswrtewwthpsh6nABiqKevU4UBI.jpg",
         "source": "tmdb",
-        "source_url": "https://www.themoviedb.org/movie/1078449-manjummel-boys",
+        "source_url": "https://www.themoviedb.org/movie/1069945-manjummel-boys",
     },
     "aavesham": {
         "title": "Aavesham",

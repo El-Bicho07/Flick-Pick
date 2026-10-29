@@ -123,6 +123,7 @@ class MovieCatalogueTests(TestCase):
         self.assertContains(res, "Inception")
         self.assertContains(res, "148 mins")
 
+    @override_settings(TMDB_API_KEY="")
     def test_operation_without_tmdb_credentials(self):
         # Even without TMDB key, tmdb functions gracefully handle calls without raising errors
         self.assertFalse(tmdb.is_tmdb_available())
@@ -1471,3 +1472,412 @@ class MovieMetadataVerificationTests(TestCase):
             self.assertTrue(first_check)
             self.assertTrue(second_check)
             self.assertEqual(mock_head.call_count, 1)
+
+
+# ==============================================================================
+# Phase 2: Mobile Navigation Accessibility & Drawer Tests
+# ==============================================================================
+
+class MobileNavigationTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username='nav_user', password='Password123!')
+        self.client.force_login(self.user)
+
+    def test_mobile_navigation_elements_present_in_base_layout(self):
+        """Checks mobile toggle button and drawer with aria attributes across pages."""
+        pages = ['home', 'movie_list', 'faq', 'create_room', 'join_room']
+        for page_name in pages:
+            res = self.client.get(reverse(page_name))
+            self.assertEqual(res.status_code, 200, f"Page {page_name} failed to load.")
+            content = res.content.decode('utf-8')
+            # Hamburger button
+            self.assertIn('id="mobile-nav-toggle"', content)
+            self.assertIn('aria-controls="mobile-nav-drawer"', content)
+            self.assertIn('aria-expanded="false"', content)
+            # Mobile drawer
+            self.assertIn('id="mobile-nav-drawer"', content)
+            self.assertIn('aria-label="Mobile Navigation"', content)
+            self.assertIn('href="/movies/"', content)
+            self.assertIn('href="/faq/"', content)
+
+
+# ==============================================================================
+# Phase 3: SECRET_KEY Validation Tests
+# ==============================================================================
+
+class SecretKeyConfigurationTests(TestCase):
+    def test_validate_secret_key_production_missing_raises_error(self):
+        from flickpick.settings import validate_secret_key
+        from django.core.exceptions import ImproperlyConfigured
+        with self.assertRaises(ImproperlyConfigured) as ctx:
+            validate_secret_key("", debug=False)
+        self.assertIn("SECRET_KEY environment variable is missing", str(ctx.exception))
+
+    def test_validate_secret_key_production_insecure_raises_error(self):
+        from flickpick.settings import validate_secret_key
+        from django.core.exceptions import ImproperlyConfigured
+        with self.assertRaises(ImproperlyConfigured) as ctx:
+            validate_secret_key("django-insecure-some-development-key-12345678", debug=False)
+        self.assertIn("is insecure or too short", str(ctx.exception))
+
+    def test_validate_secret_key_production_too_short_raises_error(self):
+        from flickpick.settings import validate_secret_key
+        from django.core.exceptions import ImproperlyConfigured
+        with self.assertRaises(ImproperlyConfigured) as ctx:
+            validate_secret_key("short-key-12345", debug=False)
+        self.assertIn("is insecure or too short", str(ctx.exception))
+
+    def test_validate_secret_key_production_valid_succeeds(self):
+        from flickpick.settings import validate_secret_key
+        strong_key = "c8f1e2a0b4d648939c12b70f283d7350719e7182243d68712395a123bc89fe01"
+        res = validate_secret_key(strong_key, debug=False)
+        self.assertEqual(res, strong_key)
+
+    def test_validate_secret_key_dev_mode_fallback_permitted(self):
+        from flickpick.settings import validate_secret_key
+        res = validate_secret_key("", debug=True)
+        self.assertTrue(res.startswith("django-insecure-dev-local-only"))
+
+
+# ==============================================================================
+# Phase 4: Consent-Based Support Ticket Experience Tests
+# ==============================================================================
+
+class ConsentBasedSupportTicketTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        call_command('seed_faqs_and_errors')
+        self.user = User.objects.create_user(username='ticket_tester', password='Password123!', email='tester@example.com')
+
+    def test_unanswered_faq_offers_ticket_without_creating_one(self):
+        """Unanswered help inquiry returns ticket offer in payload without creating a database ticket."""
+        initial_ticket_count = SupportTicket.objects.count()
+        res = self.client.post(
+            reverse('ai_chat_api'),
+            data=json.dumps({'message': 'How do I reset my account two-factor authentication key?'}),
+            content_type='application/json'
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data.get('success'))
+        self.assertIn('ticket_offer', data)
+        self.assertIsNotNone(data['ticket_offer'])
+        self.assertTrue(data['ticket_offer'].get('offered'))
+        # Crucial check: No ticket auto-created!
+        self.assertEqual(SupportTicket.objects.count(), initial_ticket_count)
+
+    def test_explicit_ticket_submission_creates_ticket_in_sql(self):
+        """Submitting to /ai/ticket/ creates ticket and returns valid tracking ID."""
+        res = self.client.post(
+            reverse('support_ticket_api'),
+            data=json.dumps({
+                'subject': 'Billing discrepancy on room creation',
+                'description': 'I have a question about how host limits work.',
+                'email': 'user@example.com'
+            }),
+            content_type='application/json'
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data.get('success'))
+        self.assertTrue(data.get('ticket_id').startswith('FP-'))
+        ticket = SupportTicket.objects.get(ticket_id=data['ticket_id'])
+        self.assertEqual(ticket.subject, 'Billing discrepancy on room creation')
+        self.assertEqual(ticket.email, 'user@example.com')
+        self.assertEqual(ticket.status, 'OPEN')
+
+    def test_authenticated_ticket_submission_attaches_user(self):
+        """Submitting ticket while logged in associates the ticket with user."""
+        self.client.login(username='ticket_tester', password='Password123!')
+        res = self.client.post(
+            reverse('support_ticket_api'),
+            data=json.dumps({
+                'subject': 'Room code expired too quickly',
+                'description': 'Room code expired before participants finished voting.'
+            }),
+            content_type='application/json'
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        ticket = SupportTicket.objects.get(ticket_id=data['ticket_id'])
+        self.assertEqual(ticket.user, self.user)
+        self.assertEqual(ticket.email, 'tester@example.com')
+
+    def test_empty_or_whitespace_subject_or_description_rejected(self):
+        """Missing or whitespace-only subject/description returns 400 error."""
+        res = self.client.post(
+            reverse('support_ticket_api'),
+            data=json.dumps({'subject': '   ', 'description': ''}),
+            content_type='application/json'
+        )
+        self.assertEqual(res.status_code, 400)
+        data = res.json()
+        self.assertFalse(data.get('success'))
+        self.assertIn('Subject and description are required', data.get('error'))
+
+    def test_invalid_email_format_rejected(self):
+        """Invalid email string returns 400 error."""
+        res = self.client.post(
+            reverse('support_ticket_api'),
+            data=json.dumps({
+                'subject': 'Test issue',
+                'description': 'Testing invalid email format.',
+                'email': 'not-an-email-address'
+            }),
+            content_type='application/json'
+        )
+        self.assertEqual(res.status_code, 400)
+        data = res.json()
+        self.assertFalse(data.get('success'))
+        self.assertIn('valid email', data.get('error').lower())
+
+    def test_rapid_duplicate_submissions_deduplicated(self):
+        """Submitting the exact same subject and description within 60s returns existing ticket."""
+        res1 = self.client.post(
+            reverse('support_ticket_api'),
+            data=json.dumps({'subject': 'Unique issue report', 'description': 'Something went wrong.'}),
+            content_type='application/json'
+        )
+        self.assertEqual(res1.status_code, 200)
+        ticket_id1 = res1.json()['ticket_id']
+
+        res2 = self.client.post(
+            reverse('support_ticket_api'),
+            data=json.dumps({'subject': 'Unique issue report', 'description': 'Something went wrong.'}),
+            content_type='application/json'
+        )
+        self.assertEqual(res2.status_code, 200)
+        ticket_id2 = res2.json()['ticket_id']
+        self.assertEqual(ticket_id1, ticket_id2)
+
+    def test_greetings_and_movie_recs_never_create_or_offer_tickets(self):
+        """Greetings and movie recommendations do not create or offer support tickets."""
+        for msg in ['Hello FlickBot!', 'Recommend three action movies in Tamil']:
+            res = self.client.post(
+                reverse('ai_chat_api'),
+                data=json.dumps({'message': msg}),
+                content_type='application/json'
+            )
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertIsNone(data.get('ticket_offer'))
+            self.assertIsNone(data.get('support_ticket'))
+
+
+# ==============================================================================
+# Phase 5: FP-001 Error Code & Widget Visibility Tests
+# ==============================================================================
+
+class ShortlistLockErrorCodeTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.host = User.objects.create_user(username='host_user', password='Password123!')
+        self.room = Room.objects.create(name='Movie Night', code=Room.generate_unique_code(), host=self.host, status='VOTING')
+        Participant.objects.create(room=self.room, user=self.host)
+        self.movie = Movie.objects.create(title='Inception', release_year=2010, language='English')
+        self.candidate = MovieCandidate.objects.create(room=self.room, movie=self.movie, added_by=self.host)
+        self.client.force_login(self.host)
+
+    def test_add_candidate_when_voting_returns_fp001(self):
+        """Adding candidate to a voting room produces an error mentioning FP-001."""
+        res = self.client.post(
+            reverse('add_candidate', kwargs={'code': self.room.code}),
+            data={'movie_id': self.movie.pk},
+            follow=True
+        )
+        messages_text = [m.message for m in res.context['messages']]
+        self.assertTrue(any('FP-001' in m for m in messages_text))
+
+    def test_remove_candidate_when_voting_returns_fp001(self):
+        """Removing candidate from a voting room produces an error mentioning FP-001."""
+        res = self.client.post(
+            reverse('remove_candidate', kwargs={'code': self.room.code, 'candidate_id': self.candidate.pk}),
+            follow=True
+        )
+        messages_text = [m.message for m in res.context['messages']]
+        self.assertTrue(any('FP-001' in m for m in messages_text))
+
+    def test_ai_add_candidate_when_voting_returns_fp001_json(self):
+        """AJAX adding candidate via AI assistant to a voting room returns FP-001 in JSON."""
+        res = self.client.post(
+            reverse('ai_add_to_shortlist', kwargs={'room_code': self.room.code}),
+            data=json.dumps({'movie_id': self.movie.pk}),
+            content_type='application/json'
+        )
+        self.assertEqual(res.status_code, 400)
+        data = res.json()
+        self.assertFalse(data.get('success'))
+        self.assertEqual(data.get('error_code'), 'FP-001')
+        self.assertIn('FP-001', data.get('error'))
+
+
+class WidgetSelectorTests(TestCase):
+    def test_ai_chat_template_hides_correct_widget_root_id(self):
+        """Template ai_chat.html correctly targets #flickpick-ai-widget-root."""
+        client = Client()
+        user = User.objects.create_user(username='ai_viewer', password='Password123!')
+        client.force_login(user)
+        res = client.get(reverse('ai_chat'))
+        self.assertEqual(res.status_code, 200)
+        content = res.content.decode('utf-8')
+        self.assertIn('#flickpick-ai-widget-root { display: none !important; }', content)
+
+
+class PosterAuditAndIntegrityRegressionTests(TestCase):
+    """
+    Regression tests to ensure poster audit rules, candidate retrievals,
+    and visual mismatch safeguards remain strictly enforced.
+    """
+
+    def test_movie_get_poster_fallback_behavior(self):
+        """Blank or missing poster_url correctly falls back to default-poster.svg."""
+        m_blank = Movie.objects.create(
+            title="Sample Without Poster",
+            release_year=2020,
+            poster_url=""
+        )
+        self.assertEqual(m_blank.get_poster(), "/static/images/default-poster.svg")
+
+        m_custom = Movie.objects.create(
+            title="Sample With Poster",
+            release_year=2020,
+            poster_url="https://image.tmdb.org/t/p/w500/custom_image.jpg"
+        )
+        self.assertEqual(m_custom.get_poster(), "https://image.tmdb.org/t/p/w500/custom_image.jpg")
+
+    def test_kgf_chapter_1_mismatch_detected_and_corrected(self):
+        """
+        KGF: Chapter 1 must never be mapped to Avengers: Infinity War poster (7WsyChQLEftFiDOVTGkv3hFpyyt.jpg)
+        or erroneous TMDB ID 560371. The verified candidate must be TMDB 564147 and poster 43ZvmTzIJ0tTzgLG8sDOfg9roLF.jpg.
+        """
+        avengers_poster = "https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg"
+        verified_kgf_poster = "https://image.tmdb.org/t/p/w500/43ZvmTzIJ0tTzgLG8sDOfg9roLF.jpg"
+
+        # Check candidate registry / proposed CSV
+        import csv
+        proposed_csv = Path(__file__).resolve().parent.parent / "reports" / "poster-audit" / "poster_replacements_proposed.csv"
+        self.assertTrue(proposed_csv.exists(), "Proposed replacements CSV must exist")
+
+        with open(proposed_csv, "r", encoding="utf-8") as f:
+            reader = list(csv.DictReader(f))
+
+        kgf_entry = next((row for row in reader if row["title"] == "KGF: Chapter 1"), None)
+        self.assertIsNotNone(kgf_entry, "KGF: Chapter 1 must be present in proposed replacements")
+        self.assertEqual(kgf_entry["proposed_tmdb_id"], "564147")
+        self.assertEqual(kgf_entry["proposed_imdb_id"], "tt7838252")
+        self.assertEqual(kgf_entry["proposed_poster_url"], verified_kgf_poster)
+        self.assertNotEqual(kgf_entry["proposed_poster_url"], avengers_poster)
+        self.assertEqual(kgf_entry["action"], "REPLACE_WITH_CANDIDATE")
+
+    def test_drishyam_mismatch_detected_and_corrected(self):
+        """
+        Drishyam (2013) must never be mapped to The Babadook poster (qt3fqapeo94TfvMyld8P7gkpXLz.jpg)
+        or TMDB ID 242224. The verified candidate must be TMDB 244049 and poster gPBldHTnqpgsrnDnSrAlFwE6Q1t.jpg.
+        """
+        babadook_poster = "https://image.tmdb.org/t/p/w500/qt3fqapeo94TfvMyld8P7gkpXLz.jpg"
+        verified_drishyam_poster = "https://image.tmdb.org/t/p/w500/gPBldHTnqpgsrnDnSrAlFwE6Q1t.jpg"
+
+        import csv
+        proposed_csv = Path(__file__).resolve().parent.parent / "reports" / "poster-audit" / "poster_replacements_proposed.csv"
+        with open(proposed_csv, "r", encoding="utf-8") as f:
+            reader = list(csv.DictReader(f))
+
+        drishyam_entry = next((row for row in reader if row["title"] == "Drishyam"), None)
+        self.assertIsNotNone(drishyam_entry, "Drishyam must be present in proposed replacements")
+        self.assertEqual(drishyam_entry["proposed_tmdb_id"], "244049")
+        self.assertEqual(drishyam_entry["proposed_imdb_id"], "tt3417422")
+        self.assertEqual(drishyam_entry["proposed_poster_url"], verified_drishyam_poster)
+        self.assertNotEqual(drishyam_entry["proposed_poster_url"], babadook_poster)
+        self.assertEqual(drishyam_entry["action"], "REPLACE_WITH_CANDIDATE")
+
+    def test_isle_of_dogs_and_jurassic_world_retrievals(self):
+        """
+        Isle of Dogs (TMDB 399174) and Jurassic World: Fallen Kingdom (TMDB 351286)
+        must have high-confidence candidate posters retrieved and verified from TMDB.
+        """
+        import csv
+        proposed_csv = Path(__file__).resolve().parent.parent / "reports" / "poster-audit" / "poster_replacements_proposed.csv"
+        with open(proposed_csv, "r", encoding="utf-8") as f:
+            reader = list(csv.DictReader(f))
+
+        isle_entry = next((row for row in reader if row["title"] == "Isle of Dogs"), None)
+        self.assertIsNotNone(isle_entry)
+        self.assertEqual(isle_entry["proposed_tmdb_id"], "399174")
+        self.assertIn("4C7ZHv5LUPq7XzxC3nq8mBr77sP.jpg", isle_entry["proposed_poster_url"])
+        self.assertEqual(isle_entry["action"], "APPLY_NEW_POSTER")
+
+        jw_entry = next((row for row in reader if row["title"] == "Jurassic World: Fallen Kingdom"), None)
+        self.assertIsNotNone(jw_entry)
+        self.assertEqual(jw_entry["proposed_tmdb_id"], "351286")
+        self.assertIn("x2Us3jR6ToMJjbcPbLimYoxf6xr.jpg", jw_entry["proposed_poster_url"])
+        self.assertEqual(jw_entry["action"], "APPLY_NEW_POSTER")
+
+    def test_avengers_and_babadook_reclamation(self):
+        """
+        Avengers: Infinity War - Part I (#8754) and The Babadook (#8526)
+        must reclaim their legitimate official artwork.
+        """
+        import csv
+        proposed_csv = Path(__file__).resolve().parent.parent / "reports" / "poster-audit" / "poster_replacements_proposed.csv"
+        with open(proposed_csv, "r", encoding="utf-8") as f:
+            reader = list(csv.DictReader(f))
+
+        avengers_entry = next((row for row in reader if "Avengers: Infinity War" in row["title"]), None)
+        self.assertIsNotNone(avengers_entry)
+        self.assertEqual(avengers_entry["proposed_tmdb_id"], "299536")
+        self.assertIn("7WsyChQLEftFiDOVTGkv3hFpyyt.jpg", avengers_entry["proposed_poster_url"])
+
+        babadook_entry = next((row for row in reader if "Babadook" in row["title"]), None)
+        self.assertIsNotNone(babadook_entry)
+        self.assertEqual(babadook_entry["proposed_tmdb_id"], "242224")
+        self.assertIn("qt3fqapeo94TfvMyld8P7gkpXLz.jpg", babadook_entry["proposed_poster_url"])
+
+    def test_proposed_replacements_prevent_duplicate_artwork_cross_linking(self):
+        """
+        Ensure no two distinct proposed movies share the exact same replacement poster URL,
+        preventing accidental cross-linking.
+        """
+        import csv
+        proposed_csv = Path(__file__).resolve().parent.parent / "reports" / "poster-audit" / "poster_replacements_proposed.csv"
+        with open(proposed_csv, "r", encoding="utf-8") as f:
+            reader = list(csv.DictReader(f))
+
+        poster_urls = [row["proposed_poster_url"] for row in reader if row["proposed_poster_url"]]
+        unique_urls = set(poster_urls)
+        self.assertEqual(len(poster_urls), len(unique_urls), "All proposed replacement poster URLs must be unique across movies")
+
+    def test_bulk_retrieve_halts_when_api_key_missing(self):
+        """Management command bulk_retrieve_tmdb_posters halts with CommandError if TMDB_API_KEY is not set."""
+        from django.core.management.base import CommandError
+        with override_settings(TMDB_API_KEY=""):
+            with self.assertRaises(CommandError) as ctx:
+                call_command('bulk_retrieve_tmdb_posters')
+            self.assertIn("TMDB_API_KEY is not configured", str(ctx.exception))
+
+    def test_title_normalization_handles_leading_articles_and_parentheses(self):
+        """Title normalization cleans trailing release years and reorders comma-separated articles."""
+        from movies.management.commands.bulk_retrieve_tmdb_posters import Command as BulkCommand
+        cmd = BulkCommand()
+        self.assertEqual(cmd._normalize_title("Toy Story (1995)"), "Toy Story")
+        self.assertEqual(cmd._normalize_title("Babadook, The (2014)"), "The Babadook")
+        self.assertEqual(cmd._normalize_title("Quiet Place, A"), "A Quiet Place")
+        self.assertEqual(cmd._normalize_title("Inception"), "Inception")
+
+    def test_bulk_retrieve_preserves_already_verified_posters(self):
+        """Movies with existing valid poster_url are safeguarded and excluded from eligible retrieval query."""
+        m_verified = Movie.objects.create(
+            title="Verified Classic",
+            release_year=1999,
+            poster_url="https://image.tmdb.org/t/p/w500/authentic_poster.jpg"
+        )
+        m_unverified = Movie.objects.create(
+            title="Needs Poster",
+            release_year=2021,
+            poster_url=""
+        )
+
+        from django.db.models import Q
+        eligible = Movie.objects.filter(Q(poster_url='') | Q(poster_url__isnull=True))
+        self.assertNotIn(m_verified, eligible)
+        self.assertIn(m_unverified, eligible)

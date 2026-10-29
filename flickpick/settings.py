@@ -10,11 +10,52 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables from .env file if it exists
 load_dotenv(BASE_DIR / '.env')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-flickpick-secret-key-development-mode-2026')
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
+
+# Insecure placeholder substrings prohibited in production environments
+INSECURE_SECRET_PATTERNS = [
+    'django-insecure',
+    'change-this',
+    'secret-key',
+    'placeholder',
+    'default',
+]
+
+
+def validate_secret_key(key: str, debug: bool) -> str:
+    """
+    Validates Django SECRET_KEY configuration.
+    In production (DEBUG=False):
+      - Must be provided and non-empty.
+      - Must be at least 32 characters long.
+      - Must not contain known insecure placeholder substrings.
+      - Raises ImproperlyConfigured on any violation.
+    In development (DEBUG=True):
+      - Permits explicit environment key or uses isolated development-only fallback.
+    """
+    cleaned = (key or '').strip('\'"')
+    if not debug:
+        from django.core.exceptions import ImproperlyConfigured
+        if not cleaned:
+            raise ImproperlyConfigured(
+                "CRITICAL SECURITY CONFIGURATION ERROR: SECRET_KEY environment variable is missing in production (DEBUG=False). "
+                "Set a strong, random SECRET_KEY in your hosting environment."
+            )
+        if any(pat in cleaned.lower() for pat in INSECURE_SECRET_PATTERNS) or len(cleaned) < 32:
+            raise ImproperlyConfigured(
+                "CRITICAL SECURITY CONFIGURATION ERROR: SECRET_KEY in production (DEBUG=False) is insecure or too short (< 32 chars). "
+                "Must be a strong, cryptographically random secret."
+            )
+        return cleaned
+
+    if cleaned:
+        return cleaned
+    return 'django-insecure-dev-local-only-flickpick-do-not-use-in-production-2026'
+
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = validate_secret_key(os.getenv('SECRET_KEY', ''), DEBUG)
 
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost,testserver').split(',') if host.strip()]
 if 'testserver' not in ALLOWED_HOSTS:
@@ -87,6 +128,8 @@ is_migration_or_management = any(
         'dumpdata',
         'import_movie_datasets',
         'seed_faqs_and_errors',
+        'apply_approved_posters',
+        'bulk_retrieve_tmdb_posters',
     ]
 )
 active_db_url = (
@@ -111,7 +154,7 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'NAME': Path(os.getenv('SQLITE_DB_PATH', BASE_DIR / 'db.sqlite3')),
         }
     }
 

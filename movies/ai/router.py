@@ -287,22 +287,27 @@ def handle_unanswered_faq_intent(user_message: str) -> AIResponse:
     """
     Handles help or platform inquiries when no matching published FAQs are found.
     Clearly explains that the assistant could not find a reliable answer in its knowledge base,
-    and offers to create a support ticket with explicit instructions without auto-creating one.
+    and offers to create a support ticket with explicit user consent without auto-creating one.
     """
     clean_query = user_message.strip()
     query_snippet = clean_query[:60] + ('...' if len(clean_query) > 60 else '')
     reply = (
         f"I searched FlickPick's knowledge base, but I could not find a reliable answer regarding:\n"
         f"*{query_snippet}*\n\n"
-        "Would you like me to open a support ticket for our engineering team to investigate this issue?\n\n"
-        "To open a ticket, simply reply with your issue details:\n"
+        "Would you like to open a support ticket for our engineering team to investigate this issue?\n\n"
+        "You can click **Create Support Ticket** below, or reply:\n"
         "👉 `Open support ticket: [describe your issue or inquiry]`\n\n"
         "Our system will log your issue in our SQL database and generate an official reference code (`#FP-XXXXXXXX`)."
     )
     return AIResponse(
         reply_text=reply,
         intent="faq",
-        unsupported_notes=f"No matching FAQ found for query: {query_snippet}"
+        unsupported_notes=f"No matching FAQ found for query: {query_snippet}",
+        ticket_offer={
+            "offered": True,
+            "subject": f"Inquiry: {clean_query[:60]}",
+            "description": clean_query
+        }
     )
 
 

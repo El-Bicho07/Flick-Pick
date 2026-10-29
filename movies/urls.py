@@ -25,6 +25,7 @@ urlpatterns = [
     path('rooms/<str:code>/start-voting/', views.start_voting, name='start_voting'),
     path('rooms/<str:code>/vote/', views.voting_view, name='voting'),
     path('rooms/<str:code>/end-voting/', views.end_voting, name='end_voting'),
+    path('rooms/<str:code>/tally-votes/', views.end_voting, name='tally_votes'),
     path('rooms/<str:code>/results/', views.results_view, name='results'),
     path('rooms/<str:code>/reset/', views.reset_room, name='reset_room'),
 

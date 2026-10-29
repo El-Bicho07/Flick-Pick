@@ -5,7 +5,7 @@
 
 {% block extra_css %}
 <style>
-  #ai-widget-root { display: none !important; }
+  #flickpick-ai-widget-root { display: none !important; }
   .chat-layout {
     display: grid;
     grid-template-columns: 280px 1fr;
@@ -471,6 +471,28 @@ document.addEventListener('DOMContentLoaded', () => {
       if (data.unsupported_notes) {
         extraNotes += `<div style="margin-top: 0.5rem; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 0.5rem 0.8rem; border-radius: var(--radius-sm); font-size: 0.8rem; color: #fde68a;">ℹ️ ${escapeHtml(data.unsupported_notes)}</div>`;
       }
+      if (data.ticket_offer && data.ticket_offer.offered) {
+        extraNotes += `
+          <div class="ai-chat-ticket-offer" style="margin-top: 0.85rem; padding: 0.85rem; border-radius: var(--radius-md); background: rgba(184, 161, 255, 0.08); border: 1px solid rgba(184, 161, 255, 0.25);">
+            <div style="font-weight: 600; font-size: 0.88rem; color: #d2c2ff; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem;">
+              <span>🎫 Open a Support Ticket?</span>
+            </div>
+            <p style="font-size: 0.8rem; color: #cac4d3; margin-bottom: 0.65rem; line-height: 1.4;">Would you like our engineering team to investigate this issue? No ticket will be created unless you confirm.</p>
+            <div class="ticket-form-container" style="display: none; margin-bottom: 0.65rem;">
+              <input type="text" class="ticket-subject form-input" value="${escapeHtml(data.ticket_offer.subject || '')}" placeholder="Ticket subject" style="width: 100%; box-sizing: border-box; margin-bottom: 0.5rem; font-size: 0.82rem;" />
+              <textarea class="ticket-description form-input" placeholder="Describe your question or issue..." style="width: 100%; box-sizing: border-box; min-height: 60px; font-size: 0.82rem; margin-bottom: 0.5rem;">${escapeHtml(data.ticket_offer.description || '')}</textarea>
+              <input type="email" class="ticket-email form-input" placeholder="Your contact email (optional)" style="width: 100%; box-sizing: border-box; margin-bottom: 0.5rem; font-size: 0.82rem;" />
+              <div style="display: flex; gap: 0.5rem;">
+                <button type="button" class="btn btn-primary btn-sm btn-confirm-ticket" onclick="window.submitChatTicket(this)">Confirm &amp; Submit Ticket</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.dismissChatTicket(this)">Cancel</button>
+              </div>
+            </div>
+            <div class="ticket-initial-actions" style="display: flex; gap: 0.5rem;">
+              <button type="button" class="btn btn-secondary btn-sm" style="border-color: rgba(184,161,255,0.5); color: #d2c2ff;" onclick="window.revealChatTicketForm(this)">🎫 Create Support Ticket</button>
+              <button type="button" class="btn btn-secondary btn-sm text-outline" onclick="window.dismissChatTicket(this)">No thanks</button>
+            </div>
+          </div>`;
+      }
 
       asstRow.innerHTML = `
         <div style="font-size: 1.3rem;">🤖</div>
@@ -543,6 +565,66 @@ document.addEventListener('DOMContentLoaded', () => {
       select.value = '';
     }
   }
+
+  window.revealChatTicketForm = function(btn) {
+    const box = btn.closest('.ai-chat-ticket-offer');
+    if (!box) return;
+    const initialActions = box.querySelector('.ticket-initial-actions');
+    const formContainer = box.querySelector('.ticket-form-container');
+    if (initialActions) initialActions.style.display = 'none';
+    if (formContainer) formContainer.style.display = 'block';
+  };
+
+  window.dismissChatTicket = function(btn) {
+    const box = btn.closest('.ai-chat-ticket-offer');
+    if (box) {
+      box.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-muted);">Support ticket offer dismissed. No ticket was created.</span>';
+      setTimeout(() => box.remove(), 1800);
+    }
+  };
+
+  window.submitChatTicket = async function(btn) {
+    const box = btn.closest('.ai-chat-ticket-offer');
+    if (!box) return;
+    const subject = box.querySelector('.ticket-subject')?.value.trim();
+    const description = box.querySelector('.ticket-description')?.value.trim();
+    const email = box.querySelector('.ticket-email')?.value.trim() || '';
+
+    if (!subject || !description) {
+      alert('Please provide both a subject and an issue description.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    try {
+      const res = await fetch('/ai/ticket/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({ subject, description, email })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        box.innerHTML = `
+          <div style="font-size: 0.85rem; color: #78d9b0; font-weight: 600; line-height: 1.4;">
+            ✅ Support Ticket Created: <code style="background: rgba(0,0,0,0.3); padding: 0.15rem 0.4rem; border-radius: 4px;">#${escapeHtml(data.ticket_id)}</code>
+            <div style="font-weight: 400; color: #cac4d3; font-size: 0.78rem; margin-top: 0.35rem;">Our engineering and support team has logged your inquiry.</div>
+          </div>`;
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Confirm & Submit Ticket';
+        alert(data.error || 'Failed to submit ticket.');
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Confirm & Submit Ticket';
+      alert('Network error while creating ticket.');
+    }
+  };
 
   attachRoomSelectListeners();
 

@@ -75,7 +75,7 @@
 <body class="bg-background text-on-background selection:bg-primary-container selection:text-surface-container-lowest antialiased min-h-screen flex flex-col font-sans">
 
   <!-- Midnight Cinema Header -->
-  <header class="sticky top-0 z-50 bg-surface-container-lowest/90 backdrop-blur-md border-b border-outline-variant/30 shadow-2xl">
+  <header class="sticky top-0 z-50 bg-surface-container-lowest/90 backdrop-blur-md border-b border-outline-variant/30 shadow-2xl relative">
     <div class="flex justify-between items-center w-full px-4 sm:px-6 md:px-12 max-w-7xl mx-auto h-20">
 
       <!-- Brand Logo -->
@@ -88,7 +88,7 @@
         </a>
 
         <!-- Desktop Navigation Links -->
-        <nav class="hidden md:flex items-center gap-6">
+        <nav class="hidden md:flex items-center gap-6" aria-label="Main Navigation">
           <a class="text-on-surface-variant hover:text-primary font-medium text-sm transition-colors duration-200" href="{% url 'home' %}">Discover</a>
           <a class="text-on-surface-variant hover:text-primary font-medium text-sm transition-colors duration-200" href="{% url 'movie_list' %}">Browse Movies</a>
           <a class="text-on-surface-variant hover:text-primary font-medium text-sm transition-colors duration-200 flex items-center gap-1.5" href="{% url 'create_room' %}">
@@ -129,11 +129,56 @@
         {% endif %}
 
         <!-- Mobile Menu Button -->
-        <button class="md:hidden mobile-nav-btn p-2 text-on-surface-variant hover:text-on-surface" aria-label="Toggle Navigation Menu">
-          <span class="material-symbols-outlined">menu</span>
+        <button id="mobile-nav-toggle"
+                class="md:hidden mobile-nav-btn p-2 text-on-surface-variant hover:text-on-surface rounded-lg transition-colors"
+                aria-label="Toggle Navigation Menu"
+                aria-expanded="false"
+                aria-controls="mobile-nav-drawer">
+          <span class="material-symbols-outlined mobile-nav-icon">menu</span>
         </button>
       </div>
     </div>
+
+    <!-- Mobile Navigation Drawer / Dropdown -->
+    <nav id="mobile-nav-drawer"
+         class="mobile-nav-drawer hidden md:hidden border-t border-outline-variant/30 bg-surface-container-lowest/95 backdrop-blur-md px-4 sm:px-6 py-4 shadow-2xl transition-all"
+         aria-label="Mobile Navigation">
+      <div class="flex flex-col gap-2">
+        <a class="mobile-nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container font-medium text-sm transition-colors" href="{% url 'home' %}">
+          <span class="material-symbols-outlined text-[18px]">explore</span>
+          <span>Discover</span>
+        </a>
+        <a class="mobile-nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container font-medium text-sm transition-colors" href="{% url 'movie_list' %}">
+          <span class="material-symbols-outlined text-[18px]">movie</span>
+          <span>Browse Movies</span>
+        </a>
+        <a class="mobile-nav-link flex items-center justify-between px-3 py-2.5 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container font-medium text-sm transition-colors" href="{% url 'create_room' %}">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[18px]">meeting_room</span>
+            <span>Group Rooms</span>
+          </span>
+          <span class="w-2 h-2 rounded-full bg-tertiary-container animate-pulse"></span>
+        </a>
+        <a class="mobile-nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container font-medium text-sm transition-colors" href="{% url 'faq' %}">
+          <span class="material-symbols-outlined text-[18px]">help</span>
+          <span>FAQs</span>
+        </a>
+        <a class="mobile-nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl bg-secondary-container/40 border border-outline-variant text-primary hover:bg-surface-container-high transition-colors text-sm font-semibold" href="{% url 'ai_chat' %}">
+          <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+          <span>AI Assistant</span>
+        </a>
+        <div class="pt-2 border-t border-outline-variant/30 flex gap-2">
+          <a href="{% url 'create_room' %}" class="flex-1 inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary-fixed hover:bg-primary py-2.5 rounded-xl font-semibold text-xs transition-all">
+            <span class="material-symbols-outlined text-[16px]">add</span>
+            <span>Host Room</span>
+          </a>
+          <a href="{% url 'join_room' %}" class="flex-1 inline-flex items-center justify-center gap-2 bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface py-2.5 rounded-xl font-semibold text-xs transition-all">
+            <span class="material-symbols-outlined text-[16px]">login</span>
+            <span>Join Room</span>
+          </a>
+        </div>
+      </div>
+    </nav>
   </header>
 
   <!-- Notification Alerts -->

@@ -177,9 +177,20 @@ h1, h2, h3, h4, h5, h6, .font-display {
   padding: 0.5rem;
 }
 
+.mobile-nav-drawer {
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
 @media (max-width: 900px) {
   .mobile-nav-btn {
     display: block;
+  }
+
+  .mobile-nav-drawer.open {
+    display: block !important;
   }
 
   .nav-links {

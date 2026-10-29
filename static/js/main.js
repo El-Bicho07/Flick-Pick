@@ -5,14 +5,55 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Mobile Navigation Toggle
-  const navBtn = document.querySelector('.mobile-nav-btn');
-  const navLinks = document.querySelector('.nav-links');
-  if (navBtn && navLinks) {
-    navBtn.addEventListener('click', () => {
-      navLinks.classList.toggle('open');
-      const expanded = navLinks.classList.contains('open');
-      navBtn.setAttribute('aria-expanded', expanded);
+  // 1. Mobile Navigation Toggle & Accessible Drawer
+  const navBtn = document.getElementById('mobile-nav-toggle') || document.querySelector('.mobile-nav-btn');
+  const navDrawer = document.getElementById('mobile-nav-drawer') || document.querySelector('.nav-links');
+  const navIcon = navBtn ? navBtn.querySelector('.material-symbols-outlined') : null;
+
+  if (navBtn && navDrawer) {
+    const toggleNav = (forceState) => {
+      const isCurrentlyOpen = navDrawer.classList.contains('open') && !navDrawer.classList.contains('hidden');
+      const shouldOpen = typeof forceState === 'boolean' ? forceState : !isCurrentlyOpen;
+
+      if (shouldOpen) {
+        navDrawer.classList.remove('hidden');
+        navDrawer.classList.add('open');
+        navBtn.setAttribute('aria-expanded', 'true');
+        if (navIcon) navIcon.textContent = 'close';
+      } else {
+        navDrawer.classList.add('hidden');
+        navDrawer.classList.remove('open');
+        navBtn.setAttribute('aria-expanded', 'false');
+        if (navIcon) navIcon.textContent = 'menu';
+      }
+    };
+
+    navBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleNav();
+    });
+
+    // Close when a link inside mobile drawer is clicked
+    navDrawer.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => toggleNav(false));
+    });
+
+    // Close on Escape key press without trapping focus
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && (navDrawer.classList.contains('open') || !navDrawer.classList.contains('hidden'))) {
+        toggleNav(false);
+        navBtn.focus();
+      }
+    });
+
+    // Close when clicking outside header / drawer
+    document.addEventListener('click', (e) => {
+      if (navDrawer.classList.contains('open') && !navDrawer.classList.contains('hidden')) {
+        const header = navBtn.closest('header');
+        if (header && !header.contains(e.target)) {
+          toggleNav(false);
+        }
+      }
     });
   }
 

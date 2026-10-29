@@ -376,7 +376,7 @@ def add_candidate(request, code):
         return HttpResponseForbidden("You are not a participant in this room.")
 
     if room.status != 'WAITING':
-        messages.error(request, "Cannot modify movie shortlist after voting has started.")
+        messages.error(request, "[FP-001] Cannot modify movie shortlist after voting has started.")
         return redirect('room_detail', code=room.code)
 
     movie_id = request.POST.get('movie_id')
@@ -405,7 +405,7 @@ def remove_candidate(request, code, candidate_id):
     candidate = get_object_or_404(MovieCandidate, pk=candidate_id, room=room)
 
     if room.status != 'WAITING':
-        messages.error(request, "Cannot modify shortlist while voting or after completion.")
+        messages.error(request, "[FP-001] Cannot modify shortlist while voting or after completion.")
         return redirect('room_detail', code=room.code)
 
     if not (room.is_host(request.user) or candidate.added_by == request.user):
@@ -428,7 +428,7 @@ def auto_shortlist(request, code):
         return HttpResponseForbidden("Unauthorized")
 
     if room.status != 'WAITING':
-        messages.error(request, "Cannot add candidates once voting has started.")
+        messages.error(request, "[FP-001] Cannot add candidates once voting has started.")
         return redirect('room_detail', code=room.code)
 
     # Filter movies matching room preferences
@@ -758,6 +758,7 @@ def ai_chat_api(request):
         'faq_items': ai_response.faq_items,
         'error_code_item': ai_response.error_code_item,
         'support_ticket': ai_response.support_ticket,
+        'ticket_offer': ai_response.ticket_offer,
     })
 
 
@@ -789,7 +790,8 @@ def ai_add_to_shortlist(request, room_code):
     if room.status != 'WAITING':
         return JsonResponse({
             'success': False,
-            'error': 'Cannot modify movie shortlist after voting has started or completed.'
+            'error_code': 'FP-001',
+            'error': '[FP-001] Cannot modify movie shortlist after voting has started or completed.'
         }, status=400)
 
     try:
@@ -962,15 +964,18 @@ def ai_feedback_api(request):
 def support_ticket_api(request):
     """
     Creates a new support ticket in the SQL database.
+    Validates input server-side, validates optional email format,
+    associates authenticated users, prevents rapid duplicates,
+    and returns safe response payloads.
     """
     try:
         data = json.loads(request.body)
     except Exception:
         data = request.POST
 
-    subject = data.get('subject', '').strip()
-    description = data.get('description', '').strip()
-    email = data.get('email', '').strip()
+    subject = str(data.get('subject', '') or '').strip()
+    description = str(data.get('description', '') or '').strip()
+    email = str(data.get('email', '') or '').strip()
 
     if not subject or not description:
         return JsonResponse({
@@ -978,12 +983,48 @@ def support_ticket_api(request):
             'error': 'Subject and description are required.'
         }, status=400)
 
-    ticket = create_support_ticket(
+    # Optional email format validation
+    if email:
+        from django.core.validators import validate_email
+        from django.core.exceptions import ValidationError
+        try:
+            validate_email(email)
+        except ValidationError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Please provide a valid email address.'
+            }, status=400)
+
+    # Deduplication: prevent identical rapid duplicate submissions within 60 seconds
+    from django.utils import timezone
+    import datetime
+    recent_cutoff = timezone.now() - datetime.timedelta(seconds=60)
+    existing = SupportTicket.objects.filter(
         subject=subject,
         description=description,
-        user=request.user if request.user.is_authenticated else None,
-        email=email
-    )
+        created_at__gte=recent_cutoff
+    ).first()
+    if existing:
+        return JsonResponse({
+            'success': True,
+            'ticket_id': existing.ticket_id,
+            'status': existing.status,
+            'message': f"Support ticket #{existing.ticket_id} was already submitted."
+        })
+
+    try:
+        ticket = create_support_ticket(
+            subject=subject,
+            description=description,
+            user=request.user if request.user.is_authenticated else None,
+            email=email
+        )
+    except Exception as e:
+        logger.error(f"Support ticket creation failed: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Unable to create support ticket at this time. Please try again shortly.'
+        }, status=500)
 
     return JsonResponse({
         'success': True,

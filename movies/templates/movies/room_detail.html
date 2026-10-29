@@ -53,7 +53,7 @@
         {% endif %}
 
         {% if is_host %}
-          <form action="{% url 'tally_votes' code=room.code %}" method="post" class="inline">
+          <form action="{% url 'end_voting' code=room.code %}" method="post" class="inline">
             {% csrf_token %}
             <button type="submit" class="btn btn-secondary text-xs" onclick="return confirm('Close voting and compute final consensus winner?');">
               End &amp; Reveal Winner

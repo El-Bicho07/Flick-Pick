@@ -91,6 +91,7 @@ class AIResponse:
     faq_items: List[Dict[str, Any]] = field(default_factory=list)
     error_code_item: Optional[Dict[str, Any]] = None
     support_ticket: Optional[Dict[str, Any]] = None
+    ticket_offer: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -104,4 +105,5 @@ class AIResponse:
             "faq_items": self.faq_items,
             "error_code_item": self.error_code_item,
             "support_ticket": self.support_ticket,
+            "ticket_offer": self.ticket_offer,
         }
